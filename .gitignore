@@ -1,0 +1,44 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+venv_linux/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Test files (optional - uncomment if you don't want to commit test scripts)
+# test_*.py
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+config.properties

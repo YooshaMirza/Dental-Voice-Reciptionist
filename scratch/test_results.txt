@@ -1,0 +1,20 @@
+Latest call in DB: Call object (6a1f34e5484dddd20f906072)
+  call_created_at (UTC): 2026-06-02 19:54:13.159000+00:00
+  call_created_at (Central): 2026-06-02 14:54:13.159000-05:00
+  Computed local date string: 2026-06-02
+  Computed display string: 2 June 2026
+
+--- Test Case A: No Date Param ---
+Response status code: 200
+SUCCESS: Found expected date display '2 June 2026' in HTML!
+
+--- Test Case B: With Date Param (?date=2026-06-02) ---
+Response status code: 200
+SUCCESS: Found expected date display '2 June 2026' in HTML!
+
+--- Test Case C: Old Date (?date=2000-01-01) ---
+Response status code: 200
+SUCCESS: Found expected date display '1 January 2000' in HTML!
+SUCCESS: Stats cards show 0 calls/bookings on old date!
+
+SUCCESS: All tests completed successfully!

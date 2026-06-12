@@ -1,0 +1,3435 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCAI Houston | Clinic Management Dashboard</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Twilio SDK and Chart.js -->
+    <script src="https://sdk.twilio.com/js/client/v1.13/twilio.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-main: #060814;
+            --bg-sidebar: #0b0f19;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --primary-light: rgba(99, 102, 241, 0.15);
+            --primary-border: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --success-border: rgba(16, 185, 129, 0.3);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-sub: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-purple: #a855f7;
+            --accent-purple-light: rgba(168, 85, 247, 0.15);
+            --accent-purple-border: rgba(168, 85, 247, 0.3);
+            --glass-bg: rgba(17, 25, 40, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Sidebar Layout */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 10;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-brand svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 2.5;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+        }
+
+        .menu-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            color: var(--text-sub);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .menu-item a:hover {
+            color: #ffffff;
+            background-color: var(--primary-light);
+            transform: translateX(4px);
+        }
+
+        .menu-item.active a {
+            color: #ffffff;
+            background-color: var(--primary);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+
+        .menu-item-logout a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            color: var(--text-sub);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .menu-item-logout a:hover {
+            color: #ffffff;
+            background-color: rgba(239, 68, 68, 0.2);
+            transform: translateX(4px);
+        }
+
+        .menu-item svg, .menu-item-logout svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        /* Main Workspace Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 1300px;
+            width: calc(100% - 260px);
+        }
+
+        /* Top Filters */
+        .top-filters {
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 0.4rem;
+            display: flex;
+            gap: 0.4rem;
+            align-self: flex-start;
+            backdrop-filter: blur(8px);
+        }
+
+        .filter-tab {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            cursor: pointer;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+        }
+
+        .filter-tab:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .filter-tab.active {
+            color: #ffffff;
+            background-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Date range/Details Row */
+        .dashboard-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .row-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+        }
+
+        /* Call Summary Card Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 992px) {
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+
+        .summary-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .summary-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+        }
+
+        .summary-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .summary-card-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-sub);
+        }
+
+        .summary-badge {
+            background-color: var(--primary-light);
+            color: #a5b4fc;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 0.3rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--primary-border);
+            text-transform: uppercase;
+        }
+
+        .summary-metrics {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .metric-item {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border-left: 3px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-item:first-child { border-left: none; }
+
+        .metric-item.success { border-left-color: var(--success); }
+        .metric-item.warning { border-left-color: var(--warning); }
+        .metric-item.danger { border-left-color: var(--danger); }
+
+        .metric-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-top: 0.25rem;
+        }
+
+        /* New Leads Section (Boxy Looks) */
+        .new-leads-section {
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .new-leads-section .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .new-leads-section .section-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .leads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .lead-card {
+            background: rgba(17, 24, 39, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lead-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(245, 158, 11, 0.4);
+            box-shadow: 0 8px 30px rgba(245, 158, 11, 0.08);
+            background: rgba(17, 24, 39, 0.6);
+        }
+
+        .lead-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .lead-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .lead-name-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .lead-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #ffffff;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .lead-phone {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 0.15rem;
+        }
+
+        .lead-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 0;
+        }
+
+        .lead-detail-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .lead-label {
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .lead-value {
+            color: #ffffff;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .lead-value.highlight-success {
+            color: #34d399;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.2);
+        }
+
+        .lead-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+        }
+
+        .lead-actions {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .btn-action-confirm {
+            flex: 1;
+            padding: 0.5rem;
+            background-color: var(--success);
+            color: #ffffff;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action-confirm:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-action-decline {
+            padding: 0.5rem 0.75rem;
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action-decline:hover {
+            background-color: var(--danger);
+            color: #ffffff;
+        }
+
+        /* Central Card View */
+        .central-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            min-height: 450px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(15, 23, 42, 0.4);
+            border-top-left-radius: 1.25rem;
+            border-top-right-radius: 1.25rem;
+        }
+
+        .panel-tab {
+            padding: 1.25rem 1.75rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover { color: #ffffff; }
+        .panel-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background-color: transparent;
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .panel-body {
+            padding: 1.5rem;
+            flex: 1;
+        }
+
+        .tab-view { display: none; }
+        .tab-view.active { display: block; }
+
+        /* Tables & List Elements */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.25);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background-color: rgba(15, 23, 42, 0.5);
+            padding: 1rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+
+        /* Directory Grid Views ("boxy looks" for directories) */
+        .cards-grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .directory-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .directory-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .directory-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .directory-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .directory-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .directory-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #ffffff;
+        }
+
+        .directory-status {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 0.15rem;
+        }
+
+        .directory-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+        }
+
+        .directory-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .directory-label {
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .directory-val {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+            border: 1px solid transparent;
+        }
+
+        .badge-inbound { background-color: var(--primary-light); color: #a5b4fc; border-color: var(--primary-border); }
+        .badge-outbound { background-color: var(--accent-purple-light); color: #c084fc; border-color: var(--accent-purple-border); }
+        .badge-completed { background-color: var(--success-light); color: #34d399; border-color: var(--success-border); }
+        .badge-failed { background-color: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+        .badge-warning { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3); }
+
+        .btn-view {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: #ffffff;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-view:hover {
+            color: #ffffff;
+            border-color: var(--primary);
+            background-color: var(--primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Dialer/Tester Interface */
+        .dialer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .dialer-grid { grid-template-columns: 1fr; }
+        }
+
+        .dialer-card {
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+
+        .dialer-card h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 1.25rem;
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .input-group { margin-bottom: 1.25rem; }
+        .input-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+            letter-spacing: 0.05em;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            background-color: rgba(15, 23, 42, 0.6);
+            color: #ffffff;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        input:focus, select:focus { 
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-green { background-color: var(--success); color: white; }
+        .btn-green:hover { background-color: #059669; opacity: 0.95; }
+        .btn-red { background-color: var(--danger); color: white; display: none; }
+        .btn-red:hover { opacity: 0.95; }
+        .btn-blue { background-color: var(--primary); color: white; }
+        .btn-blue:hover { opacity: 0.95; }
+
+        .console-box {
+            background-color: #020617;
+            color: #38bdf8;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* Centered Modal Card */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(3, 7, 18, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+        .modal-card {
+            background: #0f172a;
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            transform: scale(0.95);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+        }
+
+        .modal-overlay.open .modal-card { transform: scale(1); }
+
+        .modal-header {
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .modal-badge-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .square-badge {
+            background-color: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        .pill-badge-green {
+            background-color: var(--success-light);
+            color: #34d399;
+            border: 1px solid var(--success-border);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .pill-badge-green::before {
+            content: '';
+            width: 6px; height: 6px;
+            background-color: var(--success);
+            border-radius: 50%;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem; right: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: var(--text-sub);
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover { 
+            background: rgba(255, 255, 255, 0.1); 
+            color: #ffffff;
+        }
+
+        .modal-title-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-title-phone {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            font-weight: 500;
+            margin-top: 0.15rem;
+        }
+
+        .modal-title-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .modal-tab-bar {
+            display: flex;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 0.3rem;
+            border-radius: 0.75rem;
+            gap: 0.3rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-tab {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            color: var(--text-sub);
+        }
+
+        .modal-tab.active {
+            background-color: var(--primary);
+            color: #ffffff;
+        }
+
+        .modal-card-box {
+            background-color: rgba(15, 23, 42, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .attempt-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 1rem;
+        }
+
+        .modal-badges-list {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-grid-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .grid-stat-item {
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.6rem 0.85rem;
+            background-color: rgba(15, 23, 42, 0.25);
+        }
+
+        .grid-stat-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .grid-stat-val {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-top: 0.25rem;
+        }
+
+        .grid-stat-val.danger { color: var(--danger); }
+        .grid-stat-val.neutral { color: var(--text-sub); }
+
+        /* Custom Audio Player */
+        .audio-player {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background-color: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .audio-play-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background-color: var(--success);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .audio-play-btn:hover { transform: scale(1.08); }
+        .audio-play-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .audio-timeline {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .audio-progress {
+            width: 0%;
+            height: 100%;
+            background-color: var(--success);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .audio-pin {
+            width: 12px; height: 12px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            right: -6px; top: -3px;
+            box-shadow: 0 0 6px rgba(0,0,0,0.3);
+        }
+
+        .audio-time-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
+
+        .audio-open-tab {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* AI Insight Box */
+        .insight-box {
+            background-color: var(--accent-purple-light);
+            border: 1px solid var(--accent-purple-border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #d8b4fe;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .insight-header svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .insight-body {
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--text-sub);
+        }
+
+        /* Toggle Transcript Button */
+        .toggle-transcript-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0.75rem 0;
+            border: none;
+            background: none;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .toggle-transcript-btn svg { width: 18px; height: 18px; transition: transform 0.2s; }
+        .toggle-transcript-btn.collapsed svg { transform: rotate(180deg); }
+
+        /* Bubbles Container */
+        .transcript-bubbles {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: max-height 0.3s ease-out;
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .transcript-bubbles.collapsed { max-height: 0; overflow: hidden; }
+
+        .bubble-turn {
+            width: 100%;
+            border-radius: 0.85rem;
+            padding: 0.85rem 1.1rem;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .bubble-agent {
+            background-color: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            color: #ffffff;
+        }
+
+        .bubble-customer {
+            background-color: var(--success-light);
+            border: 1px solid var(--success-border);
+            color: #ffffff;
+        }
+
+        .bubble-speaker {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .bubble-speaker-agent { color: #a5b4fc; }
+        .bubble-speaker-customer { color: #34d399; }
+
+        /* Premium Dashboard Header & Drawer styles */
+        .top-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .header-welcome .header-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .header-welcome .username-highlight {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-welcome .header-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        .btn-about-drawer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 0.65rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-about-drawer:hover {
+            color: #ffffff;
+            border-color: var(--primary-border);
+            background-color: var(--primary-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.2);
+        }
+
+        .burger-icon {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2.5;
+        }
+
+        /* Slide-out System Info Drawer Overlay */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(3, 7, 18, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Slide-out Drawer Panel */
+        .system-drawer {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            background: #0b0f19;
+            border-left: 1px solid var(--border-color);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer-overlay.open + .system-drawer,
+        .system-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .drawer-title svg {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+        }
+
+        .drawer-close-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: var(--text-sub);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 1.25rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .drawer-close-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .drawer-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .info-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 0.85rem;
+            padding: 1.25rem;
+            transition: all 0.2s;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(168, 85, 247, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        .info-card-header svg {
+            width: 18px;
+            height: 18px;
+            color: var(--accent-purple);
+        }
+
+        .info-card-desc {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+
+        .info-card-desc ul {
+            margin-left: 1.15rem;
+            margin-top: 0.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .dialer-status {
+            padding: 0.6rem 0.85rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dialer-status.ready { background: var(--primary-light); color: #a5b4fc; border: 1px solid var(--primary-border); }
+        .dialer-status.calling { background: var(--success-light); color: #34d399; border: 1px solid var(--success-border); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+        /* Knowledge Base Styles */
+        .kb-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-glowing {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.65rem 1.25rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-glowing:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 24px rgba(168, 85, 247, 0.6);
+        }
+
+        .kb-filter-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-wrapper svg {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+            fill: none;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.65rem 1rem 0.65rem 2.5rem;
+            color: #ffffff;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .kb-filter-pills {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-pill:hover, .filter-pill.active {
+            color: #ffffff;
+            background: var(--primary-light);
+            border-color: var(--primary-border);
+        }
+
+        .kb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .kb-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .kb-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(168, 85, 247, 0.3);
+            box-shadow: 0 12px 40px 0 rgba(168, 85, 247, 0.15);
+        }
+
+        .kb-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .kb-category-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.5rem;
+            border: 1px solid currentColor;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-cat-general { color: #a5b4fc; background: var(--primary-light); border-color: var(--primary-border); }
+        .badge-cat-location { color: #34d399; background: var(--success-light); border-color: var(--success-border); }
+        .badge-cat-pricing { color: #d8b4fe; background: var(--accent-purple-light); border-color: var(--accent-purple-border); }
+
+        .kb-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-sub);
+            width: 28px;
+            height: 28px;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon-action svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .btn-icon-action:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-icon-action.delete:hover {
+            color: #ffffff;
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .kb-card-question {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+
+        .kb-card-answer {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .kb-card-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .kb-keyword-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 0.25rem;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        /* System Prompts Editor Styles */
+        .prompt-editor-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1100px) {
+            .prompt-editor-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .prompt-editor-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .prompt-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .prompt-title-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .prompt-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .prompt-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            height: 480px;
+            background: rgba(10, 15, 30, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            color: #e5e7eb;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .prompt-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; bottom: 0; left: 0; right: 0;
+            background: rgba(5, 8, 22, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+            opacity: 1;
+        }
+
+        .kb-modal {
+            background: #0f172a;
+            border: 1px solid var(--primary-border);
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 550px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover { color: #ffffff; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+        }
+
+        .form-select, .form-input, .form-textarea {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.65rem 1rem;
+            color: #ffffff;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-select option {
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        .form-select:focus, .form-input:focus, .form-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-cancel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-sub);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.65rem 1.25rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor"/></svg>
+        <span>DCAI Houston</span>
+    </div>
+    
+    <ul class="menu-list">
+        <li class="menu-item active" data-target="dashboard">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1" stroke="currentColor"/><rect x="14" y="3" width="7" height="5" rx="1" stroke="currentColor"/><rect x="14" y="12" width="7" height="9" rx="1" stroke="currentColor"/><rect x="3" y="16" width="7" height="5" rx="1" stroke="currentColor"/></svg>
+                <span>Dashboard</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="patients">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor"/><circle cx="9" cy="7" r="4" stroke="currentColor"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor"/><path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor"/></svg>
+                <span>Patient Directory</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="appointments">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor"/></svg>
+                <span>Appointments</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="dialer">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor"/></svg>
+                <span>Test Suite Dialer</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="guide">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="currentColor"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor"/></svg>
+                <span>System Guide</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="kb">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20M4 19.5L4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5" stroke="currentColor"/></svg>
+                <span>Knowledge Base</span>
+            </a>
+        </li>
+        <li class="menu-item" data-target="prompts">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor"/></svg>
+                <span>System Prompts</span>
+            </a>
+        </li>
+        <li class="menu-item-logout" style="margin-top: auto;">
+            <a href="/api/voice-agent/logout/">
+                <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor"/></svg>
+                <span>Logout</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- Main Workspace Content -->
+<div class="main-content">
+    
+    <!-- Top Bar Header with Burger menu -->
+    <div class="top-bar-header">
+        <div class="header-welcome">
+            <h1 class="header-title">Welcome back, <span class="username-highlight">{{ request.session.web_user|default:"Firoz" }}</span></h1>
+            <p class="header-subtitle">Clinic Voice Agent Dashboard & CRM Integrator</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-about-drawer" id="about-drawer-trigger" aria-label="Open System Guide">
+                <svg class="burger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                <span>System Info</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Top Filter Bar -->
+    <div class="top-filters">
+        <button class="filter-tab active" data-filter="all">All Campaigns</button>
+        <button class="filter-tab" data-filter="inbound">Inbound Assistant</button>
+        <button class="filter-tab" data-filter="outbound">Outbound Patient Advocate</button>
+    </div>
+
+    <!-- Date Row -->
+    <div class="dashboard-row">
+        <span class="row-title">Call Performance Summary</span>
+        <div class="date-navigator" style="display: flex; align-items: center; gap: 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.4rem 0.8rem; border-radius: 20px; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <a href="?date={{ prev_date_str }}" class="date-nav-btn" style="color: var(--text-sub); display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s ease; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05);" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='var(--text-main)';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text-sub)';">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </a>
+            <span style="font-size: 0.80rem; font-weight: 700; color: var(--text-sub); display: flex; align-items: center; gap: 0.4rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span style="color: var(--primary);">{{ selected_date_display }}</span>
+            </span>
+            <a href="?date={{ next_date_str }}" class="date-nav-btn" style="color: var(--text-sub); display: flex; align-items: center; justify-content: center; text-decoration: none; transition: all 0.2s ease; cursor: pointer; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.05);" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='var(--text-main)';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--text-sub)';">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Metrics Cards -->
+    <div class="summary-grid">
+        <!-- Card 1: Total Breakdown -->
+        <div class="summary-card">
+            <div class="summary-card-header">
+                <span class="summary-card-title">Total Breakdown</span>
+                <span class="summary-badge">{{ total_calls }} Calls</span>
+            </div>
+            <div class="summary-metrics">
+                <div class="metric-item success">
+                    <div class="metric-val" id="val-completed">{{ total_calls }}</div>
+                    <div class="metric-label">Total Calls</div>
+                </div>
+                <div class="metric-item warning">
+                    <div class="metric-val">{{ total_new_patients }}</div>
+                    <div class="metric-label">New Profiles</div>
+                </div>
+                <div class="metric-item danger">
+                    <div class="metric-val">0</div>
+                    <div class="metric-label">Dropped</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Successful Breakdown -->
+        <div class="summary-card">
+            <div class="summary-card-header">
+                <span class="summary-card-title">Appointment Summary</span>
+                <span class="summary-badge" style="background-color: var(--success);">{{ total_appointments }} Booked</span>
+            </div>
+            <div class="summary-metrics">
+                <div class="metric-item success">
+                    <div class="metric-val">{{ total_appointments }}</div>
+                    <div class="metric-label">Booked Slots</div>
+                </div>
+                <div class="metric-item warning">
+                    <div class="metric-val">{{ sentiment.positive }}</div>
+                    <div class="metric-label">Positive Sentiment</div>
+                </div>
+                <div class="metric-item danger">
+                    <div class="metric-val">{{ sentiment.negative }}</div>
+                    <div class="metric-label">Negative/Pain</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Central panel displaying selected navigation tab -->
+    <div class="central-panel">
+        <div class="panel-nav">
+        <div class="panel-tab active" id="tab-title-main">Recent Call Interactions</div>
+        </div>
+        
+        <div class="panel-body">
+            
+            <!-- Dashboard/Call Logs View -->
+            <div id="view-dashboard" class="tab-view active">
+                
+                <!-- New Leads Section (Boxy Looks) -->
+                <div class="new-leads-section">
+                    <div class="section-header">
+                        <h2 class="section-title">New Patient Leads</h2>
+                        <span class="badge badge-warning">{{ total_new_patients }} New</span>
+                    </div>
+                    <div class="leads-grid">
+                        {% for patient in patients %}
+                        {% if patient.patient_status == 'new_patient' %}
+                        <div class="lead-card" id="lead-card-{{ patient.id|default:patient.pk }}">
+                            <div class="lead-card-header">
+                                <div class="lead-avatar">
+                                    {{ patient.first_name|slice:":1" }}{{ patient.last_name|slice:":1" }}
+                                </div>
+                                <div class="lead-name-info">
+                                    <div class="lead-name">{{ patient.first_name }} {{ patient.last_name }}</div>
+                                    <div class="lead-phone">📞 {{ patient.phone }}</div>
+                                </div>
+                                <span class="badge badge-warning" style="align-self: flex-start;">Lead</span>
+                            </div>
+                            <div class="lead-card-body">
+                                <div class="lead-detail-row">
+                                    <span class="lead-label">Schedule Pref:</span>
+                                    <span class="lead-value">{{ patient.preferred_day|default:"Not selected" }} - {{ patient.time_preference|default:"" }}</span>
+                                </div>
+                                <div class="lead-detail-row">
+                                    <span class="lead-label">Appt Type:</span>
+                                    <span class="lead-value">{{ patient.appointment_type|default:"Cleaning Consult" }}</span>
+                                </div>
+                                {% if patient.selected_slot %}
+                                <div class="lead-detail-row">
+                                    <span class="lead-label">Chosen Slot:</span>
+                                    <span class="lead-value highlight-success">{{ patient.selected_slot }}</span>
+                                </div>
+                                {% endif %}
+                                {% if patient.call_outcome %}
+                                <div class="lead-detail-row">
+                                    <span class="lead-label">Outcome:</span>
+                                    <span class="lead-value">{{ patient.call_outcome }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="lead-card-footer">
+                                {% if patient.booking_status == 'pending' and patient.selected_slot %}
+                                <div class="lead-actions" id="lead-actions-{{ patient.id|default:patient.pk }}">
+                                    <button onclick="updateBooking('{{ patient.id|default:patient.pk }}', 'confirmed')" class="btn-action-confirm">Confirm Appt</button>
+                                    <button onclick="updateBooking('{{ patient.id|default:patient.pk }}', 'declined')" class="btn-action-decline">Decline</button>
+                                </div>
+                                {% else %}
+                                <span class="badge {% if patient.booking_status == 'confirmed' %}badge-completed{% elif patient.booking_status == 'declined' %}badge-failed{% else %}badge-inbound{% endif %}" id="lead-status-{{ patient.id|default:patient.pk }}">
+                                    Status: {{ patient.booking_status|default:"Pending" }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% empty %}
+                        <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 2rem;">No new patient leads found.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="margin-top: 2.5rem; margin-bottom: 1rem;">
+                    <h2 class="section-title" style="font-size: 1.15rem; font-weight: 800; color: #ffffff;">Recent Call Logs</h2>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Direction</th>
+                                <th>Patient Number</th>
+                                <th>Timestamp</th>
+                                <th>Outcome Status</th>
+                                <th>Sentiment Index</th>
+                                <th>Call Duration</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for call in call_logs %}
+                            <tr class="call-row-item" data-direction="{{ call.direction }}">
+                                <td>
+                                    <span class="badge {% if call.direction == 'inbound' %}badge-inbound{% else %}badge-outbound{% endif %}">
+                                        {{ call.direction }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ call.phone_number|default:call.from_number }}</strong></td>
+                                <td>{{ call.call_created_at|date:"d M Y, h:i a" }}</td>
+                                <td>
+                                    <span class="badge 
+                                    {% if call.call_status == 'completed' %}badge-completed
+                                    {% elif call.call_status == 'failed' or call.call_status == 'dnd_blocked' %}badge-failed
+                                    {% elif call.call_status == 'in-progress' %}badge-inbound
+                                    {% else %}badge-warning{% endif %}">{{ call.call_status|default:"COMPLETED" }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if call.sentiment == 'positive' %}badge-completed{% elif call.sentiment == 'negative' %}badge-failed{% else %}badge-inbound{% endif %}">
+                                        {{ call.sentiment|default:"neutral" }}
+                                    </span>
+                                </td>
+                                <td>{{ call.call_duration|default:0 }}s</td>
+                                <td>
+                                    <button class="btn-view" onclick="openCallModal('{{ call.call_sid }}')">View Result</button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No calls logged.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Patient Directory View -->
+            <div id="view-patients" class="tab-view">
+                <div class="cards-grid-view">
+                    {% for patient in patients %}
+                    <div class="directory-card">
+                        <div class="directory-header">
+                            <div class="directory-avatar">
+                                {{ patient.first_name|slice:":1" }}{{ patient.last_name|slice:":1" }}
+                            </div>
+                            <div class="directory-info">
+                                <div class="directory-name">{{ patient.first_name }} {{ patient.last_name }}</div>
+                                <div class="directory-status">
+                                    <span class="badge {% if patient.patient_status == 'new_patient' %}badge-warning{% else %}badge-inbound{% endif %}">
+                                        {{ patient.patient_status|default:"patient" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="directory-body">
+                            <div class="directory-row">
+                                <span class="directory-label">Contact:</span>
+                                <span class="directory-val">{{ patient.phone }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">Email:</span>
+                                <span class="directory-val">{{ patient.email|default:"--" }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">DOB:</span>
+                                <span class="directory-val">{{ patient.dob|default:"--" }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">ZIP Code:</span>
+                                <span class="directory-val">{{ patient.zip_code|default:"--" }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">Preferences:</span>
+                                <span class="directory-val">{{ patient.preferred_day|default:"--" }} - {{ patient.time_preference|default:"" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">No patients found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Appointments View -->
+            <div id="view-appointments" class="tab-view">
+                <div class="cards-grid-view">
+                    {% for app in appointments %}
+                    <div class="directory-card">
+                        <div class="directory-header">
+                            <div class="directory-avatar" style="background: linear-gradient(135deg, var(--success) 0%, #065f46 100%);">
+                                {{ app.first_name|slice:":1" }}{{ app.last_name|slice:":1" }}
+                            </div>
+                            <div class="directory-info">
+                                <div class="directory-name">{{ app.first_name }} {{ app.last_name }}</div>
+                                <div class="directory-status">
+                                    <span id="status-{{ app.id|default:app.pk }}" class="badge {% if app.booking_status == 'confirmed' %}badge-completed{% elif app.booking_status == 'declined' %}badge-failed{% else %}badge-inbound{% endif %}" style="text-transform: capitalize;">
+                                        {{ app.booking_status|default:"pending" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="directory-body">
+                            <div class="directory-row">
+                                <span class="directory-label">Phone:</span>
+                                <span class="directory-val">{{ app.phone }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">Appt Class:</span>
+                                <span class="directory-val">{{ app.appointment_type|default:"Cleaning Consult" }}</span>
+                            </div>
+                            <div class="directory-row">
+                                <span class="directory-label">Booked Slot:</span>
+                                <span class="directory-val" style="color: var(--success); font-weight: 700;">{{ app.selected_slot }}</span>
+                            </div>
+                        </div>
+                        {% if app.booking_status != 'confirmed' and app.booking_status != 'declined' %}
+                        <div class="lead-actions" id="actions-{{ app.id|default:app.pk }}" style="margin-top: 0.5rem; width: 100%;">
+                            <button onclick="updateBooking('{{ app.id|default:app.pk }}', 'confirmed')" class="btn-action-confirm">Confirm</button>
+                            <button onclick="updateBooking('{{ app.id|default:app.pk }}', 'declined')" class="btn-action-decline">Decline</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">No appointments booked.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Testing Suite View -->
+            <div id="view-dialer" class="tab-view">
+                <div class="dialer-grid">
+                    <!-- Inbound -->
+                    <div class="dialer-card">
+                        <h3>Simulate Inbound Call</h3>
+                        
+                        <div class="dialer-status ready" id="sim-status-box">
+                            <span class="status-dot"></span>
+                            <span id="sim-status-text">Ready to Simulator</span>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Caller Phone ID</label>
+                            <input type="text" id="sim-phone-id" value="9829229589">
+                        </div>
+                        
+                        <button class="btn-primary btn-green" id="sim-start-btn">Connect Call (Mic)</button>
+                        <button class="btn-primary btn-red" id="sim-stop-btn">End Simulation</button>
+                        
+                        <div class="console-box" id="sim-console">
+                            Web RTC Device loaded.
+                        </div>
+                    </div>
+
+                    <!-- Outbound -->
+                    <div class="dialer-card">
+                        <h3>Trigger Outbound Advocate</h3>
+                        
+                        <div class="input-group">
+                            <label>Patient Phone Number</label>
+                            <input type="text" id="outbound-phone-val" placeholder="+1...">
+                        </div>
+                        <div class="input-group">
+                            <label>Patient Name</label>
+                            <input type="text" id="outbound-name-val" placeholder="Rajendra Gandhi">
+                        </div>
+                        <div class="input-group">
+                            <label>Appointment Type</label>
+                            <select id="outbound-appt-val">
+                                <option value="Cleaning Consult">New Patient Cleaning</option>
+                                <option value="EP Treatment">Emergency Treatment</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn-primary btn-blue" id="outbound-trigger-btn">Place Call via Twilio</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Guide View -->
+            <div id="view-guide" class="tab-view">
+                <style>
+                    .guide-grid {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1.5rem;
+                    }
+                    .guide-intro-card {
+                        background: linear-gradient(135deg, var(--primary-light) 0%, rgba(99, 102, 241, 0.05) 100%);
+                        border: 1px solid var(--primary-border);
+                        border-radius: 1rem;
+                        padding: 1.5rem;
+                    }
+                    .guide-intro-title {
+                        font-size: 1.1rem;
+                        font-weight: 800;
+                        color: var(--primary);
+                        margin-bottom: 0.5rem;
+                    }
+                    .guide-intro-desc {
+                        font-size: 0.85rem;
+                        color: var(--text-sub);
+                        line-height: 1.5;
+                    }
+                    .guide-step-list {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                        gap: 1.25rem;
+                    }
+                    .guide-step-card {
+                        background-color: var(--bg-card);
+                        border: 1px solid var(--border-color);
+                        border-radius: 1rem;
+                        padding: 1.25rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.75rem;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .guide-step-number {
+                        position: absolute;
+                        top: -10px;
+                        right: -5px;
+                        font-size: 4rem;
+                        font-weight: 900;
+                        color: rgba(99, 102, 241, 0.08);
+                        user-select: none;
+                        line-height: 1;
+                    }
+                    .guide-step-header {
+                        font-size: 0.9rem;
+                        font-weight: 800;
+                        color: var(--text-main);
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    }
+                    .guide-step-header svg {
+                        width: 18px;
+                        height: 18px;
+                        color: var(--primary);
+                    }
+                    .guide-step-body {
+                        font-size: 0.78rem;
+                        color: var(--text-sub);
+                        line-height: 1.45;
+                    }
+                    .guide-step-badge {
+                        background-color: var(--primary-light);
+                        color: var(--primary);
+                        font-size: 0.65rem;
+                        font-weight: 700;
+                        padding: 0.15rem 0.4rem;
+                        border-radius: 0.25rem;
+                        align-self: flex-start;
+                    }
+                </style>
+                <div class="guide-grid">
+                    <div class="guide-intro-card">
+                        <div class="guide-intro-title">DCAI Houston Voice Bot Integration Guide</div>
+                        <div class="guide-intro-desc">
+                            Welcome to the Clinic Management Dashboard. This guide outlines how the AI voice agent captures leads, simulates/places real calls, syncs with GoHighLevel (GHL) CRM, and handles booking approvals.
+                        </div>
+                    </div>
+                    
+                    <div class="guide-step-list">
+                        <!-- Step 1 -->
+                        <div class="guide-step-card">
+                            <div class="guide-step-number">1</div>
+                            <div class="guide-step-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                <span>Lead Acquisition</span>
+                            </div>
+                            <div class="guide-step-badge">Inbound / Outbound</div>
+                            <div class="guide-step-body">
+                                Leads are captured via online ads or manual triggers. GHL pushes the details to our backend via webhooks, triggering an outbound Twilio call. Inbound calls are received directly from patients dialling the Twilio number.
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="guide-step-card">
+                            <div class="guide-step-number">2</div>
+                            <div class="guide-step-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                <span>AI Conversation</span>
+                            </div>
+                            <div class="guide-step-badge">Gemini Live</div>
+                            <div class="guide-step-body">
+                                The call connects directly to Gemini. The AI voice bot qualifies the patient, explains All-on-X details (without revealing pricing upfront), and checks for calendar slots.
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="guide-step-card">
+                            <div class="guide-step-number">3</div>
+                            <div class="guide-step-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                <span>Booking Request</span>
+                            </div>
+                            <div class="guide-step-badge">CRM Booking Status</div>
+                            <div class="guide-step-body">
+                                Once the patient selects a slot, the AI books it in GHL as a <strong>new request</strong> (Option 1). It saves the GHL appointment ID and displays the slot as <code>pending</code> in the dashboard.
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="guide-step-card">
+                            <div class="guide-step-number">4</div>
+                            <div class="guide-step-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                <span>Manual Review & Sync</span>
+                            </div>
+                        <div class="guide-step-badge">Live API Action</div>
+                            <div class="guide-step-body">
+                                The clinic team reviews the call transcript. Clicking **Confirm** updates the GHL appointment status to <code>confirmed</code>. Clicking **Decline** updates it to <code>cancelled</code> in GHL.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-intro-card" style="background: rgba(15, 23, 42, 0.02); border-color: var(--border-color);">
+                        <div class="guide-intro-title" style="color: var(--text-main); font-size: 0.95rem;">💡 Tips for Testing:</div>
+                        <div class="guide-intro-desc" style="font-size: 0.78rem;">
+                            • <strong>Web Dialer:</strong> Use the <i>Test Suite Dialer</i> tab to start an inbound call simulation. Make sure to talk through booking a slot.<br>
+                            • <strong>MongoDB Handoff:</strong> View call details, listen to local recordings, and approve bookings directly from the <i>Dashboard</i> tab.<br>
+                            • <strong>Live GHL:</strong> Set your <code>GHL_API_KEY</code> in <code>config.properties</code> to sync approvals with your CRM in real time.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base Manager View -->
+            <div id="view-kb" class="tab-view">
+                <div class="kb-header-row">
+                    <div>
+                        <h2 class="section-title" style="font-size: 1.15rem; font-weight: 800; color: #ffffff;">Knowledge Base Rules</h2>
+                        <p style="font-size: 0.75rem; color: var(--text-sub); margin-top: 0.25rem;">Manage the answers and deflection logic used by the AI assistant.</p>
+                    </div>
+                    <button class="btn-glowing" id="btn-add-kb-rule">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add KB Rule
+                    </button>
+                </div>
+
+                <div class="kb-filter-row">
+                    <div class="search-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" class="search-input" id="kb-search-input" placeholder="Search rules, keywords, procedures...">
+                    </div>
+                    <div class="kb-filter-pills">
+                        <button class="filter-pill active" data-kb-filter="all">All</button>
+                        <button class="filter-pill" data-kb-filter="pricing">Pricing</button>
+                        <button class="filter-pill" data-kb-filter="location">Location</button>
+                        <button class="filter-pill" data-kb-filter="general">General</button>
+                    </div>
+                </div>
+
+                <div class="kb-grid" id="kb-rules-container">
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">Loading Knowledge Base rules...</div>
+                </div>
+            </div>
+
+            <!-- System Prompts Editor View -->
+            <div id="view-prompts" class="tab-view">
+                <div class="kb-header-row">
+                    <div>
+                        <h2 class="section-title" style="font-size: 1.15rem; font-weight: 800; color: #ffffff;">System Prompts Manager</h2>
+                        <p style="font-size: 0.75rem; color: var(--text-sub); margin-top: 0.25rem;">Modify the core instructions for Alice (Inbound) and Dentina (Outbound).</p>
+                    </div>
+                </div>
+
+                <div class="prompt-editor-grid">
+                    <!-- Inbound Prompts Card -->
+                    <div class="prompt-editor-card">
+                        <div class="prompt-card-header">
+                            <div class="prompt-title-wrapper">
+                                <span class="prompt-title">Inbound AI Assistant (Alice)</span>
+                                <span class="prompt-subtitle">Answers calls, qualifies leads, schedules appointments</span>
+                            </div>
+                            <span class="badge badge-completed">Active</span>
+                        </div>
+                        <textarea class="prompt-textarea" id="prompt-inbound-text" placeholder="Loading inbound system prompt..."></textarea>
+                        <button class="btn-glowing" onclick="savePrompt('inbound')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save Inbound Prompt
+                        </button>
+                    </div>
+
+                    <!-- Outbound Prompts Card -->
+                    <div class="prompt-editor-card">
+                        <div class="prompt-card-header">
+                            <div class="prompt-title-wrapper">
+                                <span class="prompt-title">Outbound Patient Advocate (Dentina)</span>
+                                <span class="prompt-subtitle">Follows up on ad leads, guides through consultation waiver</span>
+                            </div>
+                            <span class="badge badge-completed">Active</span>
+                        </div>
+                        <textarea class="prompt-textarea" id="prompt-outbound-text" placeholder="Loading outbound system prompt..."></textarea>
+                        <button class="btn-glowing" onclick="savePrompt('outbound')" style="background: linear-gradient(135deg, var(--accent-purple) 0%, var(--primary) 100%);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save Outbound Prompt
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Centered Modal Card Container (Screenshot 1 Match) -->
+<div class="modal-overlay" id="call-details-overlay" onclick="closeCallModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <!-- Close x -->
+        <button class="modal-close" onclick="closeCallModal()">&times;</button>
+        
+        <!-- Modal Header Section -->
+        <div class="modal-header">
+            <div class="modal-badge-row">
+                <span class="square-badge">DCAI</span>
+                <span class="pill-badge-green" id="modal-patient-status">On time</span>
+            </div>
+            <div class="modal-title-name" id="modal-patient-name">
+                Rajendra Gandhi
+            </div>
+            <div class="modal-title-phone" id="modal-patient-phone">
+                📞 9829229589
+            </div>
+            <div class="modal-title-subtitle">
+                Dental Care & Implants of Houston | Patient Advocate
+            </div>
+        </div>
+
+        <!-- Modal Body Details -->
+        <div class="modal-body">
+            
+            <!-- Modal Tabs Switcher -->
+            <div class="modal-tab-bar">
+                <div class="modal-tab active">Calls 1</div>
+                <div class="modal-tab">WhatsApp <span style="font-size:0.6rem; vertical-align:middle; color:var(--success); font-weight:800;">TESTING</span></div>
+            </div>
+
+            <!-- Attempt Details Card -->
+            <div class="modal-card-box">
+                <div class="attempt-header">
+                    <span id="modal-attempt-label">Attempt 1 of 1</span>
+                    <span id="modal-attempt-time">26 May 2026, 9:19 pm</span>
+                </div>
+                
+                <div class="modal-badges-list">
+                    <span class="badge badge-outbound" id="modal-direction-badge">Outbound</span>
+                    <span class="badge badge-completed">Completed</span>
+                    <span class="badge badge-inbound" style="background-color:#e0f2fe; color:#0369a1; border-color:#bae6fd;">Latest</span>
+                </div>
+
+                <!-- 2x2 Grid Stats -->
+                <div class="modal-grid-stats">
+                    <div class="grid-stat-item">
+                        <div class="grid-stat-label">Sentiment</div>
+                        <div class="grid-stat-val" id="stat-sentiment">Positive</div>
+                    </div>
+                    <div class="grid-stat-item">
+                        <div class="grid-stat-label">Interacted</div>
+                        <div class="grid-stat-val" id="stat-interacted">Yes</div>
+                    </div>
+                    <div class="grid-stat-item">
+                        <div class="grid-stat-label">Scheduled Appt</div>
+                        <div class="grid-stat-val" id="stat-scheduled">Yes</div>
+                    </div>
+                    <div class="grid-stat-item">
+                        <div class="grid-stat-label">New Patient</div>
+                        <div class="grid-stat-val" id="stat-newpatient">Yes</div>
+                    </div>
+                </div>
+
+                <!-- Custom Audio Player -->
+                <div class="audio-player">
+                    <button class="audio-play-btn" id="custom-play-btn">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                    </button>
+                    <div class="audio-timeline" id="custom-timeline">
+                        <div class="audio-progress" id="custom-progress" style="width: 0%;">
+                            <div class="audio-pin"></div>
+                        </div>
+                    </div>
+                    <div class="audio-time-label" id="custom-time-label">0:00 / 0:00</div>
+                    <a href="#" class="audio-open-tab" id="custom-open-tab" target="_blank">
+                        Open in tab
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    </a>
+                </div>
+
+                <!-- AI Insight Lavender Box -->
+                <div class="insight-box">
+                    <div class="insight-header">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <span>AI Insight</span>
+                    </div>
+                    <div class="insight-body" id="modal-ai-insight">
+                        Patient confirmed their appointment details and expressed eagerness to proceed with treatment.
+                    </div>
+                </div>
+
+                <!-- Toggle Transcript -->
+                <button class="toggle-transcript-btn" id="toggle-transcript-btn">
+                    <span>Hide transcript</span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                </button>
+
+                <!-- Bubbles -->
+                <div class="transcript-bubbles" id="modal-transcript-bubbles">
+                    <!-- Turns loaded dynamically -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<audio id="hidden-player" style="display: none;"></audio>
+
+<script>
+    // Navigation Routing Tabs
+    const menuItems = document.querySelectorAll('.menu-item');
+    const views = document.querySelectorAll('.tab-view');
+    const tabTitleMain = document.getElementById('tab-title-main');
+
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            menuItems.forEach(el => el.classList.remove('active'));
+            views.forEach(el => el.classList.remove('active'));
+            
+            item.classList.add('active');
+            const target = item.getAttribute('data-target');
+            
+            if (target === 'dashboard') {
+                document.getElementById('view-dashboard').classList.add('active');
+                tabTitleMain.textContent = 'Recent Call Interactions';
+            } else if (target === 'patients') {
+                document.getElementById('view-patients').classList.add('active');
+                tabTitleMain.textContent = 'Registered Clinic Patients';
+} else if (target === 'appointments') {
+                document.getElementById('view-appointments').classList.add('active');
+                tabTitleMain.textContent = 'Scheduled Patient Slots';
+            } else if (target === 'dialer') {
+                document.getElementById('view-dialer').classList.add('active');
+                tabTitleMain.textContent = 'Web Dialer Integration Simulator';
+            } else if (target === 'guide') {
+                document.getElementById('view-guide').classList.add('active');
+                tabTitleMain.textContent = 'DCAI Houston Voice Bot | System Guide';
+            } else if (target === 'kb') {
+                document.getElementById('view-kb').classList.add('active');
+                tabTitleMain.textContent = 'Knowledge Base Manager';
+                loadKbRules();
+            } else if (target === 'prompts') {
+                document.getElementById('view-prompts').classList.add('active');
+                tabTitleMain.textContent = 'System Prompts Manager';
+                loadSystemPrompts();
+            }
+        });
+    });
+
+    // ── Knowledge Base Management Logic ──────────────────────────────────────
+    let kbRules = [];
+    let kbFilter = 'all';
+
+    const kbModalOverlay = document.getElementById('kb-modal-overlay');
+    const kbRuleForm = document.getElementById('kb-rule-form');
+    const btnAddKbRule = document.getElementById('btn-add-kb-rule');
+    const kbModalClose = document.getElementById('kb-modal-close');
+    const btnCancelKbModal = document.getElementById('btn-cancel-kb-modal');
+    const kbSearchInput = document.getElementById('kb-search-input');
+    const kbCategorySelect = document.getElementById('kb-category');
+    const pricingFields = document.getElementById('pricing-specific-fields');
+
+    // Load KB Rules from API
+    async function loadKbRules() {
+        const container = document.getElementById('kb-rules-container');
+        if (!container) return;
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">Loading Knowledge Base rules...</div>';
+        
+        try {
+            const resp = await fetch('/api/voice-agent/api/kb/');
+            const result = await resp.json();
+            if (result.success) {
+                kbRules = result.data;
+                renderKbRules();
+            } else {
+                container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 3rem;">Failed to load rules: ${result.error}</div>`;
+            }
+        } catch (err) {
+            container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 3rem;">Error: ${err.message}</div>`;
+        }
+    }
+
+    // Render KB cards with filtering/search
+    window.renderKbRules = function() {
+        const container = document.getElementById('kb-rules-container');
+        if (!container) return;
+        const query = kbSearchInput ? kbSearchInput.value.toLowerCase() : '';
+        
+        const filtered = kbRules.filter(rule => {
+            const catMatch = (kbFilter === 'all' || rule.category === kbFilter);
+            const searchMatch = !query || 
+                (rule.question && rule.question.toLowerCase().includes(query)) ||
+                (rule.answer && rule.answer.toLowerCase().includes(query)) ||
+                (rule.keywords && rule.keywords.some(k => k.toLowerCase().includes(query))) ||
+                (rule.procedure_name && rule.procedure_name.toLowerCase().includes(query));
+            return catMatch && searchMatch;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">No matching Knowledge Base rules found.</div>';
+            return;
+        }
+
+        container.innerHTML = filtered.map(rule => {
+            const keywordsHtml = rule.keywords && rule.keywords.length > 0 
+                ? `<div class="kb-card-keywords">${rule.keywords.map(k => `<span class="kb-keyword-pill">${k}</span>`).join('')}</div>`
+                : '';
+                
+            let pricingInfo = '';
+            if (rule.category === 'pricing' && rule.starting_price) {
+                pricingInfo = `<div style="font-size:0.75rem; color:var(--accent-purple); font-weight:700; margin-bottom:0.25rem;">Price: $${rule.starting_price}</div>`;
+            }
+
+            return `
+                <div class="kb-card" data-id="${rule._id}">
+                    <div class="kb-card-header">
+                        <span class="kb-category-badge badge-cat-${rule.category}">${rule.category}</span>
+                        <div class="kb-card-actions">
+                            <button class="btn-icon-action" onclick="editKbRule('${rule._id}')" title="Edit Rule">
+                                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                            </button>
+                            <button class="btn-icon-action delete" onclick="deleteKbRule('${rule._id}')" title="Delete Rule">
+                                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="10" y1="11" x2="10" y2="17" fill="none" stroke="currentColor" stroke-width="2"/><line x1="14" y1="11" x2="14" y2="17" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="kb-card-question">${rule.question}</div>
+                    ${pricingInfo}
+                    <div class="kb-card-answer">${rule.answer}</div>
+                    ${keywordsHtml}
+                </div>
+            `;
+        }).join('');
+    };
+
+    // Filter by category pills
+    document.querySelectorAll('[data-kb-filter]').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('[data-kb-filter]').forEach(el => el.classList.remove('active'));
+            pill.classList.add('active');
+            kbFilter = pill.getAttribute('data-kb-filter');
+            renderKbRules();
+        });
+    });
+
+    if (kbSearchInput) {
+        kbSearchInput.addEventListener('input', renderKbRules);
+    }
+
+    // Modal Control
+    window.togglePricingFields = function(category) {
+        if (!pricingFields) return;
+        if (category === 'pricing') {
+            pricingFields.style.display = 'flex';
+        } else {
+            pricingFields.style.display = 'none';
+        }
+    };
+
+    window.openKbModal = function(rule = null) {
+        if (!kbModalOverlay) return;
+        kbModalOverlay.classList.add('open');
+        if (rule) {
+            document.getElementById('kb-modal-title').textContent = 'Edit KB Rule';
+            document.getElementById('kb-rule-id').value = rule._id;
+            document.getElementById('kb-category').value = rule.category;
+            document.getElementById('kb-question').value = rule.question;
+            document.getElementById('kb-answer').value = rule.answer;
+            document.getElementById('kb-keywords').value = rule.keywords ? rule.keywords.join(', ') : '';
+            
+            togglePricingFields(rule.category);
+            if (rule.category === 'pricing') {
+                document.getElementById('kb-proc-name').value = rule.procedure_name || '';
+                document.getElementById('kb-start-price').value = rule.starting_price || '';
+                document.getElementById('kb-proc-notes').value = rule.notes || '';
+            }
+        } else {
+            document.getElementById('kb-modal-title').textContent = 'Add KB Rule';
+            if (kbRuleForm) kbRuleForm.reset();
+            document.getElementById('kb-rule-id').value = '';
+            togglePricingFields('general');
+        }
+    };
+
+    window.closeKbModal = function() {
+        if (kbModalOverlay) kbModalOverlay.classList.remove('open');
+    };
+
+    if (btnAddKbRule) btnAddKbRule.addEventListener('click', () => openKbModal());
+    if (kbModalClose) kbModalClose.addEventListener('click', closeKbModal);
+    if (btnCancelKbModal) btnCancelKbModal.addEventListener('click', closeKbModal);
+
+    // Add / Edit Form Submit
+    window.handleKbFormSubmit = async function(event) {
+        event.preventDefault();
+        
+        const id = document.getElementById('kb-rule-id').value;
+        const category = document.getElementById('kb-category').value;
+        const question = document.getElementById('kb-question').value.trim();
+        const answer = document.getElementById('kb-answer').value.trim();
+        const keywords = document.getElementById('kb-keywords').value.trim();
+        
+        const payload = {
+            category,
+            question,
+            answer,
+            keywords
+        };
+        
+        if (id) payload.id = id;
+        
+        if (category === 'pricing') {
+            payload.procedure_name = document.getElementById('kb-proc-name').value.trim();
+            payload.starting_price = document.getElementById('kb-start-price').value.trim();
+            payload.notes = document.getElementById('kb-proc-notes').value.trim();
+        }
+
+        try {
+            const resp = await fetch('/api/voice-agent/api/kb/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                closeKbModal();
+                loadKbRules();  // reload rules
+            } else {
+                alert('Failed to save KB rule: ' + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving KB rule.');
+        }
+    };
+
+    // Edit Rule
+    window.editKbRule = function(id) {
+        const rule = kbRules.find(r => r._id === id);
+        if (rule) openKbModal(rule);
+    };
+
+    // Delete Rule
+    window.deleteKbRule = async function(id) {
+        if (!confirm('Are you sure you want to delete this Knowledge Base rule?')) return;
+        
+        try {
+            const resp = await fetch(`/api/voice-agent/api/kb/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                loadKbRules();
+            } else {
+                alert('Failed to delete rule: ' + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error deleting KB rule.');
+        }
+    };
+
+    // ── System Prompts Management Logic ─────────────────────────────────────
+    const promptInboundText = document.getElementById('prompt-inbound-text');
+    const promptOutboundText = document.getElementById('prompt-outbound-text');
+
+    async function loadSystemPrompts() {
+        if (promptInboundText) promptInboundText.placeholder = "Loading system prompt from MongoDB...";
+        if (promptOutboundText) promptOutboundText.placeholder = "Loading system prompt from MongoDB...";
+        
+        try {
+            const resp = await fetch('/api/voice-agent/api/prompts/');
+            const result = await resp.json();
+            if (result.success) {
+                if (promptInboundText) promptInboundText.value = result.prompts.inbound;
+                if (promptOutboundText) promptOutboundText.value = result.prompts.outbound;
+            } else {
+                alert('Failed to load system prompts: ' + result.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error loading prompts.');
+        }
+    }
+
+    window.savePrompt = async function(type) {
+        const textVal = type === 'inbound' ? promptInboundText.value : promptOutboundText.value;
+        
+        if (!confirm(`Are you sure you want to save modifications to the ${type.toUpperCase()} prompt?`)) return;
+        
+        try {
+            const resp = await fetch('/api/voice-agent/api/prompts/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    prompt_type: type,
+                    prompt_text: textVal
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                alert(`Success: ${type.capitalize()} prompt updated successfully!`);
+            } else {
+                alert('Failed to save prompt: ' + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving system prompt.');
+        }
+    };
+    
+    // Capitalize Helper
+    String.prototype.capitalize = function() {
+        return this.charAt(0).toUpperCase() + this.slice(1);
+    }
+
+    // Campaign Filter Tabs
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const callRows = document.querySelectorAll('.call-row-item');
+
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            filterTabs.forEach(el => el.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const filter = tab.getAttribute('data-filter');
+            
+            callRows.forEach(row => {
+                const dir = row.getAttribute('data-direction');
+                if (filter === 'all') {
+                    row.style.display = 'table-row';
+                } else if (filter === 'inbound' && dir === 'inbound') {
+                    row.style.display = 'table-row';
+                } else if (filter === 'outbound' && dir === 'outbound') {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Custom Transcript Toggle
+    const toggleBtn = document.getElementById('toggle-transcript-btn');
+    const bubblesContainer = document.getElementById('modal-transcript-bubbles');
+    toggleBtn.addEventListener('click', () => {
+        const isCollapsed = bubblesContainer.classList.toggle('collapsed');
+        toggleBtn.classList.toggle('collapsed');
+        toggleBtn.querySelector('span').textContent = isCollapsed ? 'Show transcript' : 'Hide transcript';
+    });
+
+    // Custom Audio Player State
+    const hiddenPlayer = document.getElementById('hidden-player');
+    const customPlayBtn = document.getElementById('custom-play-btn');
+    const customTimeline = document.getElementById('custom-timeline');
+    const customProgress = document.getElementById('custom-progress');
+    const customTimeLabel = document.getElementById('custom-time-label');
+
+    customPlayBtn.addEventListener('click', () => {
+        if (!hiddenPlayer.src) return;
+        if (hiddenPlayer.paused) {
+            hiddenPlayer.play();
+            customPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>';
+        } else {
+            hiddenPlayer.pause();
+            customPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>';
+        }
+    });
+
+    hiddenPlayer.addEventListener('timeupdate', () => {
+        if (!hiddenPlayer.duration) return;
+        const progressPercentage = (hiddenPlayer.currentTime / hiddenPlayer.duration) * 100;
+        customProgress.style.width = `${progressPercentage}%`;
+        
+        const curMin = Math.floor(hiddenPlayer.currentTime / 60);
+        const curSec = Math.floor(hiddenPlayer.currentTime % 60).toString().padStart(2, '0');
+        const totMin = Math.floor(hiddenPlayer.duration / 60);
+        const totSec = Math.floor(hiddenPlayer.duration % 60).toString().padStart(2, '0');
+        
+        customTimeLabel.textContent = `${curMin}:${curSec} / ${totMin}:${totSec}`;
+    });
+
+    customTimeline.addEventListener('click', (e) => {
+        if (!hiddenPlayer.duration) return;
+        const rect = customTimeline.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickPercentage = clickX / rect.width;
+        hiddenPlayer.currentTime = clickPercentage * hiddenPlayer.duration;
+    });
+
+    // Transcript String Parser
+    function parseTranscriptToTurns(text, turns) {
+        if (turns && turns.length > 0) return turns;
+        if (!text) return [];
+        
+        const lines = text.split('\n');
+        const parsed = [];
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            
+            if (line.startsWith('Agent:')) {
+                parsed.push({speaker: 'agent', text: line.replace('Agent:', '').trim()});
+            } else if (line.startsWith('Alice:')) {
+                parsed.push({speaker: 'agent', text: line.replace('Alice:', '').trim()});
+            } else if (line.startsWith('Dentina:')) {
+                parsed.push({speaker: 'agent', text: line.replace('Dentina:', '').trim()});
+            } else if (line.startsWith('Candidate:')) {
+                parsed.push({speaker: 'candidate', text: line.replace('Candidate:', '').trim()});
+            } else if (line.startsWith('Patient:')) {
+                parsed.push({speaker: 'candidate', text: line.replace('Patient:', '').trim()});
+            } else if (line.startsWith('Human:')) {
+                parsed.push({speaker: 'candidate', text: line.replace('Human:', '').trim()});
+            } else if (line.includes(':')) {
+                const idx = line.indexOf(':');
+                const speaker = line.slice(0, idx).trim().toLowerCase();
+                const content = line.slice(idx + 1).trim();
+                if (speaker.includes('agent') || speaker.includes('alice') || speaker.includes('dentina') || speaker.includes('ai')) {
+                    parsed.push({speaker: 'agent', text: content});
+                } else {
+                    parsed.push({speaker: 'candidate', text: content});
+                }
+            } else {
+                parsed.push({speaker: 'candidate', text: line});
+            }
+        }
+        return parsed;
+    }
+
+    // Modal Details Fetcher
+    const overlay = document.getElementById('call-details-overlay');
+    const modalPatientName = document.getElementById('modal-patient-name');
+    const modalPatientPhone = document.getElementById('modal-patient-phone');
+    const modalPatientStatus = document.getElementById('modal-patient-status');
+    const modalAttemptLabel = document.getElementById('modal-attempt-label');
+    const modalAttemptTime = document.getElementById('modal-attempt-time');
+    const modalDirectionBadge = document.getElementById('modal-direction-badge');
+    const statSentiment = document.getElementById('stat-sentiment');
+    const statInteracted = document.getElementById('stat-interacted');
+    const statScheduled = document.getElementById('stat-scheduled');
+    const statNewPatient = document.getElementById('stat-newpatient');
+    const modalAiInsight = document.getElementById('modal-ai-insight');
+    const customOpenTab = document.getElementById('custom-open-tab');
+
+    async function openCallModal(callSid) {
+        bubblesContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 1rem;">Loading transcription turns...</div>';
+        overlay.classList.add('open');
+        
+        // Reset player UI
+        hiddenPlayer.pause();
+        hiddenPlayer.src = '';
+        customPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>';
+        customProgress.style.width = '0%';
+        customTimeLabel.textContent = '0:00 / 0:00';
+        
+        try {
+            const resp = await fetch(`/api/voice-agent/api/calls/${callSid}/`);
+            const data = await resp.json();
+            
+            if (data.success) {
+                const call = data.call;
+                
+                // Prefill details
+                modalPatientName.textContent = call.customer_name || call.phone_number || 'Unknown';
+                modalPatientPhone.textContent = `📞 ${call.phone_number}`;
+                modalPatientStatus.textContent = (call.call_status || 'unknown').toUpperCase();
+                modalAttemptLabel.textContent = `Attempt 1 of 1`;
+                
+                if (call.call_date) {
+                    modalAttemptTime.textContent = new Date(call.call_date).toLocaleString();
+                } else {
+                    modalAttemptTime.textContent = 'Recent Call';
+                }
+                
+                // Direction badge
+                modalDirectionBadge.textContent = call.direction.toUpperCase();
+                modalDirectionBadge.className = `badge ${call.direction === 'inbound' ? 'badge-inbound' : 'badge-outbound'}`;
+                
+                // Grid stats
+                statSentiment.textContent = call.sentiment.toUpperCase();
+                statSentiment.className = `grid-stat-val ${call.sentiment === 'positive' ? '' : (call.sentiment === 'negative' ? 'danger' : 'neutral')}`;
+                
+                // Deduce interacted/scheduled
+                const interacted = call.call_duration > 5 ? 'Yes' : 'No';
+                statInteracted.textContent = interacted;
+                
+                const apptMatch = (call.conversation_summary || '').toLowerCase().includes('book') || (call.conversation_summary || '').toLowerCase().includes('schedul');
+                const scheduled = apptMatch ? 'Yes' : 'No';
+                statScheduled.textContent = scheduled;
+                
+                statNewPatient.textContent = call.direction === 'inbound' ? 'Yes' : 'No';
+                
+                // AI Insight text
+                modalAiInsight.textContent = call.conversation_summary || 'No AI insight summary available for this call attempt.';
+                
+                // Set audio player source
+                if (call.call_recording_url) {
+                    hiddenPlayer.src = call.call_recording_url;
+                    customOpenTab.href = call.call_recording_url;
+                    customOpenTab.style.display = 'flex';
+                } else {
+                    customOpenTab.style.display = 'none';
+                }
+
+                // Render turns
+                const turns = parseTranscriptToTurns(call.transcript, call.turns);
+                bubblesContainer.innerHTML = '';
+                
+                if (turns.length > 0) {
+                    turns.forEach(turn => {
+                        const isAgent = turn.speaker === 'agent';
+                        const bubble = document.createElement('div');
+                        bubble.className = `bubble-turn ${isAgent ? 'bubble-agent' : 'bubble-customer'}`;
+                        bubble.innerHTML = `
+                            <div class="bubble-speaker ${isAgent ? 'bubble-speaker-agent' : 'bubble-speaker-customer'}">
+                                ${isAgent ? 'AGENT' : 'CUSTOMER'}
+                            </div>
+                            <div>${turn.text}</div>
+                        `;
+                        bubblesContainer.appendChild(bubble);
+                    });
+                } else {
+                    bubblesContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.7rem; padding: 1rem;">No speech turns transcribed.</div>';
+                }
+            } else {
+                bubblesContainer.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 1rem;">Failed: ${data.error}</div>`;
+            }
+        } catch (err) {
+            bubblesContainer.innerHTML = `<div style="color: var(--danger); text-align: center; padding: 1rem;">Error rendering: ${err.message}</div>`;
+        }
+    }
+
+    function closeCallModal() {
+        overlay.classList.remove('open');
+        hiddenPlayer.pause();
+    }
+
+    // Twilio Web Dialer Logic (Simulator)
+    let device = null;
+    let activeCall = null;
+    let initialized = false;
+
+    const simStartBtn = document.getElementById('sim-start-btn');
+    const simStopBtn = document.getElementById('sim-stop-btn');
+    const simConsole = document.getElementById('sim-console');
+    const simStatusText = document.getElementById('sim-status-text');
+    const simStatusBox = document.getElementById('sim-status-box');
+
+    function logSim(msg) {
+        const time = new Date().toLocaleTimeString();
+        simConsole.innerHTML = `<div><span style="color:var(--primary);">[${time}]</span> ${msg}</div>` + simConsole.innerHTML;
+    }
+
+    async function initDevice() {
+        if (initialized) return true;
+        logSim("Init Twilio WebRTC Device...");
+        return new Promise((resolve) => {
+            fetch('/api/voice-agent/twilio/token/')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success || !data.token) {
+                        logSim("❌ Config Error: " + (data.error || "Missing Twilio voice SDK token. Check credentials."));
+                        resetSimUI();
+                        resolve(false);
+                        return;
+                    }
+                    device = new Twilio.Device(data.token, { codecPreferences: ['opus', 'pcmu'] });
+                    
+                    device.on('registered', () => {
+                        logSim("Device registered successfully.");
+                        initialized = true;
+                        resolve(true);
+                    });
+
+                    device.on('error', (err) => {
+                        logSim("Device Error: " + err.message + " (Code: " + err.code + ")");
+                        initialized = false;
+                        resetSimUI();
+                        resolve(false);
+                    });
+                    
+                    device.register();
+                })
+                .catch(err => {
+                    logSim("Device Init Error: " + err.message);
+                    resolve(false);
+                });
+        });
+    }
+
+    simStartBtn.addEventListener('click', async () => {
+        const phone = document.getElementById('sim-phone-id').value.trim();
+        if (!phone) {
+            alert("Simulated Phone is required.");
+            return;
+        }
+
+        const success = await initDevice();
+        if (!success) return;
+
+        simStatusText.textContent = "Initiating...";
+        simStatusBox.className = "dialer-status calling";
+        simStartBtn.disabled = true;
+        logSim("Connecting dialer to Alice...");
+
+        try {
+            activeCall = await device.connect({
+                from: phone,
+                direction: 'inbound',
+                name: 'Test Patient'
+            });
+
+            simStartBtn.style.display = 'none';
+            simStopBtn.style.display = 'block';
+            simStatusText.textContent = "Connecting...";
+            logSim("Outgoing connection request created.");
+
+            activeCall.on('accept', () => {
+                logSim("Call established with Voicebot.");
+                simStatusText.textContent = "Call Active (Inbound)";
+                simStatusBox.className = "dialer-status calling";
+            });
+
+            activeCall.on('disconnect', () => {
+                logSim("Call finished.");
+                resetSimUI();
+            });
+
+            activeCall.on('error', (err) => {
+                logSim("Call Error: " + err.message);
+                resetSimUI();
+            });
+        } catch (err) {
+            logSim("Error: " + err.message);
+            resetSimUI();
+        }
+    });
+
+    simStopBtn.addEventListener('click', () => {
+        if (activeCall) activeCall.disconnect();
+    });
+
+    function resetSimUI() {
+        simStartBtn.style.display = 'block';
+        simStartBtn.disabled = false;
+        simStopBtn.style.display = 'none';
+        simStatusText.textContent = "Ready to Simulator";
+        simStatusBox.className = "dialer-status ready";
+    }
+
+    // Outbound Call Trigger
+    const outboundTriggerBtn = document.getElementById('outbound-trigger-btn');
+    outboundTriggerBtn.addEventListener('click', async () => {
+        const phone = document.getElementById('outbound-phone-val').value.trim();
+        const name = document.getElementById('outbound-name-val').value.trim();
+        const apptType = document.getElementById('outbound-appt-val').value;
+
+        if (!phone) {
+            alert("Phone number is required.");
+            return;
+        }
+
+        outboundTriggerBtn.disabled = true;
+        logSim(`Triggering outbound patient call to ${phone}...`);
+
+        try {
+            const resp = await fetch('/api/voice-agent/twilio/make-call/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone,
+                    customerName: name || 'Patient',
+                    appointment_type: apptType
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                logSim(`✅ Outbound Call placed! SID: ${data.call_sid}`);
+            } else {
+                logSim(`❌ Failed outbound: ${data.error}`);
+            }
+        } catch (err) {
+            logSim(`Error: ${err.message}`);
+        } finally {
+            outboundTriggerBtn.disabled = false;
+        }
+    });
+
+    // Slide-out Drawer Control
+    const drawerOverlay = document.getElementById('about-drawer-overlay');
+    const systemDrawer = document.getElementById('about-system-drawer');
+    const drawerTrigger = document.getElementById('about-drawer-trigger');
+    const drawerClose = document.getElementById('about-drawer-close');
+
+    function openDrawer() {
+        drawerOverlay.classList.add('open');
+        systemDrawer.classList.add('open');
+    }
+
+    function closeDrawer() {
+        drawerOverlay.classList.remove('open');
+        systemDrawer.classList.remove('open');
+    }
+
+    if (drawerTrigger) drawerTrigger.addEventListener('click', openDrawer);
+    if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
+    if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+
+    // Manual Booking Sync Actions
+    window.updateBooking = async function(patientId, status) {
+        if (!confirm(`Are you sure you want to mark this booking as ${status}?`)) return;
+        
+        try {
+            const resp = await fetch('/api/voice-agent/api/booking/update/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ patient_id: patientId, status: status })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                // Update badge text and colors
+                const statusSpan = document.getElementById('status-' + patientId);
+                if (statusSpan) {
+                    statusSpan.textContent = status;
+                    statusSpan.className = `badge ${status === 'confirmed' ? 'badge-completed' : 'badge-failed'}`;
+                }
+                
+                // Hide actions container
+                const actionsTd = document.getElementById('actions-' + patientId);
+                if (actionsTd) {
+                    actionsTd.innerHTML = '';
+                }
+            } else {
+                alert('Error updating booking status: ' + data.error);
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Booking update request failed.');
+        }
+    };
+    
+    // Cookie Helper for CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+<!-- Slide-out System Info Drawer Overlay and Panel -->
+<div class="drawer-overlay" id="about-drawer-overlay"></div>
+<div class="system-drawer" id="about-system-drawer">
+    <div class="drawer-header">
+        <div class="drawer-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>DCAI Portal System Info</span>
+        </div>
+        <button class="drawer-close-btn" id="about-drawer-close">&times;</button>
+    </div>
+    
+    <div class="drawer-body">
+        <!-- Card 1 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span>Ideology &amp; Business Flow</span>
+            </div>
+            <div class="info-card-desc">
+                DCAI Houston matches dental implant candidates with All-on-X consultation slots. The AI voice agent answers candidate FAQs, checks slot availability, and requests bookings.
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>Campaign Flow (Option 1)</span>
+            </div>
+            <div class="info-card-desc">
+                We implement the <strong>Appointment Request Workflow</strong>. Bookings are saved as <i>pending</i> requests. The doctor manually confirms or declines them, syncing back to the GoHighLevel API.
+            </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Dashboard Actions</span>
+            </div>
+            <div class="info-card-desc">
+                <ul>
+                    <li><strong>Recent Interactions</strong>: Analyze live transcripts, sentiments, summaries, and play call recordings fetched locally.</li>
+                    <li><strong>Patient Directory</strong>: Manage records (DOB, ZIP, preference notes).</li>
+                    <li><strong>Appointments</strong>: Action buttons send PUT requests to confirm/cancel slots in GHL CRM.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                <span>Testing Dialer Simulator</span>
+            </div>
+            <div class="info-card-desc">
+                1. Go to the <strong>Test Suite Dialer</strong> tab.<br>
+                2. Input caller phone number.<br>
+                3. Click <strong>Connect Call (Mic)</strong>.<br>
+                4. Talk to the Gemini Live bot, request a slot, and verify the booking updates.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KB Rule Modal Overlay -->
+<div class="modal-overlay" id="kb-modal-overlay">
+    <div class="kb-modal">
+        <div class="modal-header">
+            <span class="modal-title" id="kb-modal-title">Add KB Rule</span>
+            <button class="modal-close" id="kb-modal-close">&times;</button>
+        </div>
+        <form id="kb-rule-form" onsubmit="handleKbFormSubmit(event)">
+            <input type="hidden" id="kb-rule-id" value="">
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                <div class="form-group">
+                    <label class="form-label" for="kb-category">Category</label>
+                    <select class="form-select" id="kb-category" onchange="togglePricingFields(this.value)">
+                        <option value="general">General</option>
+                        <option value="location">Location</option>
+                        <option value="pricing">Pricing</option>
+                    </select>
+                </div>
+                
+                <!-- Pricing Specific Fields (Hidden by default) -->
+                <div id="pricing-specific-fields" style="display:none; flex-direction:column; gap:1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="kb-proc-name">Procedure Name</label>
+                        <input type="text" class="form-input" id="kb-proc-name" placeholder="e.g. Consultation">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="kb-start-price">Starting Price</label>
+                        <input type="text" class="form-input" id="kb-start-price" placeholder="e.g. 60">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="kb-proc-notes">Notes / Special Guidelines</label>
+                        <input type="text" class="form-input" id="kb-proc-notes" placeholder="e.g. do not give unless asked">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="kb-question">Question / Topic</label>
+                    <input type="text" class="form-input" id="kb-question" placeholder="e.g. What are your office hours?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="kb-answer">Response Answer</label>
+                    <textarea class="form-textarea" id="kb-answer" rows="4" placeholder="Type the answer the voice agent should read..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="kb-keywords">Trigger Keywords (comma-separated)</label>
+                    <input type="text" class="form-input" id="kb-keywords" placeholder="e.g. hours, schedule, open" required>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="margin-top:1.5rem;">
+                <button type="button" class="btn-cancel" id="btn-cancel-kb-modal">Cancel</button>
+                <button type="submit" class="btn-glowing">Save Rule</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
