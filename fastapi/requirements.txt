@@ -1,0 +1,53 @@
+# --------------------
+# Core FastAPI / ASGI
+# --------------------
+fastapi==0.115.6
+uvicorn==0.32.1
+jinja2==3.1.4
+email-validator==2.2.0
+python-multipart==0.0.17
+websockets>=13.1
+
+# --------------------
+# MongoDB
+# --------------------
+pymongo==3.12.3
+dnspython==2.8.0
+
+# --------------------
+# Auth
+# --------------------
+PyJWT==2.10.1
+passlib==1.7.4
+itsdangerous==2.2.0
+
+# --------------------
+# HTTP & Utils
+# --------------------
+requests==2.32.5
+httpx==0.28.1
+python-dotenv==1.2.1
+python-dateutil==2.9.0.post0
+pytz==2025.2
+
+# --------------------
+# Google / Gemini AI
+# --------------------
+google-genai==1.56.0
+google-generativeai==0.8.3
+google-auth==2.47.0
+
+# --------------------
+# Telephony
+# --------------------
+twilio==9.0.0
+
+# --------------------
+# Audio processing
+# --------------------
+audioop-lts==0.2.1; python_version >= "3.13"
+
+# --------------------
+# AWS S3 (optional recordings)
+# --------------------
+boto3==1.35.94
