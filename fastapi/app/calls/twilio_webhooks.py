@@ -158,18 +158,16 @@ async def call_recording(call_sid: str):
 
 @router.post("/twilio/make-call/")
 async def make_call(request: Request):
-    """Trigger an outbound Twilio call via API."""
+    """Trigger an outbound Twilio call via API — used by the dashboard's
+    "Trigger Outbound Advocate" form (manual test dial, no GHL lead behind it)."""
     data = await request.json()
     phone = data.get("phone")
     if not phone:
         return JSONResponse({"success": False, "error": "Phone number required"}, status_code=400)
 
     context = {
-        "customerName": data.get("customerName", "Candidate"),
-        "job_interest": data.get("job_interest"),
-        "location": data.get("location"),
-        "agent_name": data.get("agent_name", "Career Assistant"),
-        "agency": data.get("agency", "South African Job Portal"),
+        "customerName": data.get("customerName") or "Patient",
+        "appointment_type": data.get("appointment_type") or "Cleaning",
     }
 
     res = initiate_twilio_call(phone, context)

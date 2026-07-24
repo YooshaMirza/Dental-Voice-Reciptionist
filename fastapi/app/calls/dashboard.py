@@ -25,6 +25,7 @@ from app.db.mongo import (
     web_users_collection,
 )
 from app.db.calls import call_sid_lookup_filter
+from app.db.settings import get_auto_call_enabled, set_auto_call_enabled
 from app.ghl.calendar import create_appointment, sync_appointment_status
 
 logger = logging.getLogger(__name__)
@@ -287,6 +288,19 @@ async def update_booking(request: Request):
 
     firoz_lalani_collection.update_one({"_id": ObjectId(patient_id)}, {"$set": update_fields})
     return {"success": True, "booking_status": status_val}
+
+
+@router.get("/api/settings/auto-call/")
+async def get_auto_call_setting():
+    return {"success": True, "enabled": get_auto_call_enabled()}
+
+
+@router.post("/api/settings/auto-call/")
+async def update_auto_call_setting(request: Request):
+    data = await request.json()
+    enabled = bool(data.get("enabled"))
+    set_auto_call_enabled(enabled)
+    return {"success": True, "enabled": enabled}
 
 
 @router.get("/api/kb/")

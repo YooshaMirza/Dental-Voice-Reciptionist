@@ -26,6 +26,7 @@ knowledge_base_collection = db["knowledge_base"]
 users_collection = db["api_customuser"]
 web_users_collection = db["web_users"]
 ghl_leads_collection = db["ghl_leads"]
+app_settings_collection = db["app_settings"]
 
 # In-memory store for active outbound call contexts (mirrors the old process-local store)
 call_context_store: dict = {}

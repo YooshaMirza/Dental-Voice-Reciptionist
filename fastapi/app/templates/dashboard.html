@@ -1669,6 +1669,154 @@
             opacity: 1;
         }
 
+        /* Pending Leads */
+        .menu-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 0.1rem 0.45rem;
+            border-radius: 1rem;
+            line-height: 1.4;
+        }
+        .lead-toggle-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .lead-toggle-title { font-weight: 700; color: #fff; margin-bottom: 0.3rem; font-size: 0.95rem; }
+        .lead-toggle-desc { font-size: 0.78rem; color: var(--text-sub); max-width: 640px; line-height: 1.5; }
+
+        .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch-slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background-color: rgba(255,255,255,0.15);
+            transition: 0.2s;
+            border-radius: 26px;
+        }
+        .switch-slider::before {
+            position: absolute; content: "";
+            height: 20px; width: 20px; left: 3px; bottom: 3px;
+            background-color: #fff;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+        .switch input:checked + .switch-slider { background-color: var(--primary); }
+        .switch input:checked + .switch-slider::before { transform: translateX(20px); }
+
+        .lead-card-summary {
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+            margin: 0.6rem 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Onboarding Tour */
+        .tour-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: none;
+        }
+        .tour-backdrop.open { display: block; }
+
+        .tour-spotlight {
+            position: fixed;
+            border-radius: 0.75rem;
+            box-shadow: 0 0 0 9999px rgba(3, 7, 18, 0.78);
+            border: 2px solid var(--primary);
+            transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+            pointer-events: none;
+        }
+        .tour-spotlight.centered-mode { display: none; }
+
+        .tour-tooltip {
+            position: fixed;
+            width: min(320px, 90vw);
+            background: #0f172a;
+            border: 1px solid var(--primary-border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            transition: top 0.3s ease, left 0.3s ease;
+        }
+        .tour-tooltip.centered {
+            position: fixed;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%);
+            width: min(400px, 90vw);
+            text-align: center;
+        }
+
+        .tour-step-count {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        .tour-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        .tour-text {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            line-height: 1.5;
+            margin-bottom: 1.1rem;
+        }
+        .tour-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .tour-skip-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.4rem 0;
+        }
+        .tour-skip-btn:hover { color: var(--text-sub); }
+        .tour-nav-btns { display: flex; gap: 0.5rem; }
+        .tour-btn {
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+        }
+        .tour-btn:hover { background: rgba(255,255,255,0.1); }
+        .tour-btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        .tour-btn.primary:hover { opacity: 0.9; }
+        .tour-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
         .kb-modal {
             background: #0f172a;
             border: 1px solid var(--primary-border);
@@ -1806,6 +1954,13 @@
                 <span>Appointments</span>
             </a>
         </li>
+        <li class="menu-item" data-target="ghl-leads">
+            <a href="#">
+                <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor"/></svg>
+                <span>Pending Leads</span>
+                <span class="menu-badge" id="pending-leads-badge" style="display:none;">0</span>
+            </a>
+        </li>
         <li class="menu-item" data-target="dialer">
             <a href="#">
                 <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor"/></svg>
@@ -1849,6 +2004,14 @@
             <p class="header-subtitle">Clinic Voice Agent Dashboard & CRM Integrator</p>
         </div>
         <div class="header-actions">
+            <button class="btn-about-drawer" id="tour-trigger-btn" aria-label="Take a tour of the dashboard">
+                <svg class="burger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Take a Tour</span>
+            </button>
             <button class="btn-about-drawer" id="about-drawer-trigger" aria-label="Open System Guide">
                 <svg class="burger-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -2162,6 +2325,24 @@
                     {% else %}
                     <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">No appointments booked.</div>
                     {% endfor %}
+                </div>
+            </div>
+
+            <!-- Pending GHL Leads View -->
+            <div id="view-ghl-leads" class="tab-view">
+                <div class="lead-toggle-card">
+                    <div>
+                        <div class="lead-toggle-title">Automatically call new leads</div>
+                        <div class="lead-toggle-desc">When on, a call is placed the moment a lead arrives from GHL. When off, leads land below for manual review — click any lead to see exactly what the AI will use as context, then call when ready.</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-call-toggle">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <div class="cards-grid-view" id="pending-leads-container">
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">Loading pending leads...</div>
                 </div>
             </div>
 
@@ -2589,9 +2770,179 @@
                 document.getElementById('view-prompts').classList.add('active');
                 tabTitleMain.textContent = 'System Prompts Manager';
                 loadSystemPrompts();
+            } else if (target === 'ghl-leads') {
+                document.getElementById('view-ghl-leads').classList.add('active');
+                tabTitleMain.textContent = 'Pending GHL Leads';
+                loadAutoCallSetting();
+                loadPendingLeads();
             }
         });
     });
+
+    // ── Pending GHL Leads (manual review + trigger call) ─────────────────────
+    const autoCallToggle = document.getElementById('auto-call-toggle');
+    const pendingLeadsContainer = document.getElementById('pending-leads-container');
+    const pendingLeadsBadge = document.getElementById('pending-leads-badge');
+    const leadModalOverlay = document.getElementById('lead-modal-overlay');
+    let currentLeadId = null;
+
+    async function loadAutoCallSetting() {
+        try {
+            const resp = await fetch('/api/voice-agent/api/settings/auto-call/');
+            const data = await resp.json();
+            if (data.success) autoCallToggle.checked = data.enabled;
+        } catch (err) {
+            console.error('Failed to load auto-call setting', err);
+        }
+    }
+
+    if (autoCallToggle) {
+        autoCallToggle.addEventListener('change', async () => {
+            const enabled = autoCallToggle.checked;
+            try {
+                await fetch('/api/voice-agent/api/settings/auto-call/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+            } catch (err) {
+                alert('Failed to update setting: ' + err.message);
+                autoCallToggle.checked = !enabled;
+            }
+        });
+    }
+
+    function timeAgo(isoString) {
+        if (!isoString) return '';
+        const diffMs = Date.now() - new Date(isoString).getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return `${Math.floor(hrs / 24)}d ago`;
+    }
+
+    async function loadPendingLeads() {
+        if (!pendingLeadsContainer) return;
+        try {
+            const resp = await fetch('/api/ghl/leads/pending/');
+            const data = await resp.json();
+            if (!data.success) throw new Error('Failed to load');
+
+            if (pendingLeadsBadge) {
+                if (data.leads.length > 0) {
+                    pendingLeadsBadge.textContent = data.leads.length;
+                    pendingLeadsBadge.style.display = 'inline-block';
+                } else {
+                    pendingLeadsBadge.style.display = 'none';
+                }
+            }
+
+            if (data.leads.length === 0) {
+                pendingLeadsContainer.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">No leads awaiting review. New GHL leads will show up here.</div>';
+                return;
+            }
+
+            pendingLeadsContainer.innerHTML = data.leads.map(lead => `
+                <div class="directory-card">
+                    <div class="directory-header">
+                        <div class="directory-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, #1e3a6e 100%);">
+                            ${(lead.customer_name || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div class="directory-info">
+                            <div class="directory-name">${lead.customer_name || 'Unknown'}</div>
+                            <div class="directory-status" style="font-size:0.72rem; color: var(--text-muted);">${timeAgo(lead.received_at)}</div>
+                        </div>
+                    </div>
+                    <div class="directory-body">
+                        <div class="directory-row">
+                            <span class="directory-label">Phone:</span>
+                            <span class="directory-val">${lead.phone || '--'}</span>
+                        </div>
+                    </div>
+                    ${lead.lead_context_summary ? `<div class="lead-card-summary">${lead.lead_context_summary}</div>` : ''}
+                    <div class="lead-actions" style="margin-top: 0.5rem; width: 100%;">
+                        <button onclick="openLeadModal('${lead.id}')" class="btn-action-confirm" style="width:100%;">View &amp; Call</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (err) {
+            pendingLeadsContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--danger); padding: 3rem;">Error loading leads: ${err.message}</div>`;
+        }
+    }
+
+    window.openLeadModal = async function(leadId) {
+        currentLeadId = leadId;
+        leadModalOverlay.classList.add('open');
+        document.getElementById('lead-modal-contact').textContent = 'Loading...';
+        document.getElementById('lead-modal-summary').textContent = '';
+        document.getElementById('lead-modal-answers').innerHTML = '';
+
+        try {
+            const resp = await fetch(`/api/ghl/leads/${leadId}/`);
+            const data = await resp.json();
+            if (!data.success) throw new Error('Lead not found');
+            const lead = data.lead;
+
+            document.getElementById('lead-modal-title').textContent = lead.customer_name || 'Lead Details';
+            document.getElementById('lead-modal-contact').innerHTML = `
+                <div><strong>${lead.customer_name || 'Unknown'}</strong></div>
+                <div>${lead.phone || 'No phone on file'}</div>
+                ${lead.email ? `<div>${lead.email}</div>` : ''}
+                ${lead.location_name ? `<div style="color:var(--text-muted);">${lead.location_name}</div>` : ''}
+            `;
+            document.getElementById('lead-modal-summary').textContent = lead.lead_context_summary || 'No intake survey answers captured for this lead — the call will open with the standard script.';
+
+            const answersEl = document.getElementById('lead-modal-answers');
+            if (lead.answered_questions && lead.answered_questions.length > 0) {
+                answersEl.innerHTML = lead.answered_questions.map(qa => `
+                    <div style="border-left: 2px solid var(--primary-border); padding-left: 0.6rem;">
+                        <div style="color: var(--text-muted); font-size:0.72rem;">${qa.question}</div>
+                        <div style="color: var(--text-main);">${qa.answer}</div>
+                    </div>
+                `).join('');
+            } else {
+                answersEl.innerHTML = '<div style="color: var(--text-muted);">No survey questions answered.</div>';
+            }
+        } catch (err) {
+            document.getElementById('lead-modal-contact').textContent = 'Error: ' + err.message;
+        }
+    };
+
+    function closeLeadModal() {
+        leadModalOverlay.classList.remove('open');
+        currentLeadId = null;
+    }
+
+    document.getElementById('lead-modal-close').addEventListener('click', closeLeadModal);
+    document.getElementById('lead-modal-cancel').addEventListener('click', closeLeadModal);
+
+    document.getElementById('lead-modal-call-btn').addEventListener('click', async () => {
+        if (!currentLeadId) return;
+        const btn = document.getElementById('lead-modal-call-btn');
+        btn.disabled = true;
+        btn.textContent = 'Calling...';
+        try {
+            const resp = await fetch(`/api/ghl/leads/${currentLeadId}/call/`, { method: 'POST' });
+            const data = await resp.json();
+            if (data.success) {
+                closeLeadModal();
+                loadPendingLeads();
+            } else {
+                alert('Failed to place call: ' + (data.call_result ? data.call_result.error : 'unknown error'));
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Call Now';
+        }
+    });
+
+    // Check for pending leads on initial dashboard load too, so the sidebar badge
+    // shows a count even before the user opens the Pending Leads tab.
+    loadPendingLeads();
 
     // ── Knowledge Base Management Logic ──────────────────────────────────────
     let kbRules = [];
@@ -3370,6 +3721,164 @@
         }
         return cookieValue;
     }
+
+    // ── Onboarding Tour ────────────────────────────────────────────────────
+    const TOUR_STEPS = [
+        {
+            center: true,
+            title: 'Welcome to the DCAI Dashboard',
+            text: "Take a 60-second look around, or skip anytime — this won't show again once you finish or skip it."
+        },
+        {
+            selector: '.sidebar',
+            title: 'Navigation',
+            text: 'Switch between your call dashboard, patient directory, appointments, pending leads, test dialer, knowledge base, and AI scripts from here.'
+        },
+        {
+            selector: '.date-navigator',
+            tab: 'dashboard',
+            title: 'Call History Calendar',
+            text: 'Click the date to jump straight to any day’s call activity, or use the arrows to step through one day at a time.'
+        },
+        {
+            selector: '.table-container',
+            tab: 'dashboard',
+            title: 'Recent Call Logs',
+            text: 'Every call lands here. Click "View Result" on any row for the full transcript, sentiment, recording, and AI-generated summary.'
+        },
+        {
+            selector: '.menu-item[data-target="ghl-leads"]',
+            title: 'Pending Leads',
+            text: 'New leads from GHL show up here for manual review. Open a lead to see exactly what the AI will use as context, then trigger the call when you’re ready — or flip the switch here to have new leads call automatically.'
+        },
+        {
+            selector: '.menu-item[data-target="appointments"]',
+            title: 'Appointments',
+            text: 'Confirm or decline booked slots here — confirming is what actually creates the appointment on your real GHL calendar.'
+        },
+        {
+            selector: '.menu-item[data-target="dialer"]',
+            title: 'Test Suite Dialer',
+            text: 'Manually place a test outbound call, or simulate an inbound call, right from your browser.'
+        },
+        {
+            selector: '.menu-item[data-target="kb"]',
+            title: 'Knowledge Base',
+            text: 'Teach Alice and Dentina how to answer common questions about your practice — hours, address, insurance, and more.'
+        },
+        {
+            selector: '.menu-item[data-target="prompts"]',
+            title: 'System Prompts',
+            text: 'Edit the exact scripts Alice (inbound) and Dentina (outbound) follow on every call.'
+        },
+        {
+            center: true,
+            title: "You're all set!",
+            text: 'Explore at your own pace — you can always click "Take a Tour" again from the top right.'
+        },
+    ];
+
+    let tourStepIndex = 0;
+    const tourBackdrop = document.getElementById('tour-backdrop');
+    const tourSpotlight = document.getElementById('tour-spotlight');
+    const tourTooltip = document.getElementById('tour-tooltip');
+    const tourTitleEl = document.getElementById('tour-title');
+    const tourTextEl = document.getElementById('tour-text');
+    const tourStepCountEl = document.getElementById('tour-step-count');
+    const tourBackBtn = document.getElementById('tour-back-btn');
+    const tourNextBtn = document.getElementById('tour-next-btn');
+
+    function renderTourStep() {
+        const step = TOUR_STEPS[tourStepIndex];
+        tourStepCountEl.textContent = `Step ${tourStepIndex + 1} of ${TOUR_STEPS.length}`;
+        tourTitleEl.textContent = step.title;
+        tourTextEl.textContent = step.text;
+        tourBackBtn.disabled = tourStepIndex === 0;
+        tourNextBtn.textContent = tourStepIndex === TOUR_STEPS.length - 1 ? 'Finish' : 'Next';
+
+        if (step.tab) {
+            const navItem = document.querySelector(`.menu-item[data-target="${step.tab}"]`);
+            if (navItem && !navItem.classList.contains('active')) navItem.click();
+        }
+
+        if (step.center || !step.selector) {
+            tourSpotlight.classList.add('centered-mode');
+            tourTooltip.classList.add('centered');
+            return;
+        }
+
+        tourSpotlight.classList.remove('centered-mode');
+        tourTooltip.classList.remove('centered');
+
+        const target = document.querySelector(step.selector);
+        if (!target) {
+            // Target not found (e.g. narrow viewport hid it) — fall back to a centered card
+            tourSpotlight.classList.add('centered-mode');
+            tourTooltip.classList.add('centered');
+            return;
+        }
+
+        target.scrollIntoView({ block: 'center', behavior: 'instant' });
+
+        // Give layout a tick to settle after any tab switch / scroll before measuring.
+        setTimeout(() => {
+            const rect = target.getBoundingClientRect();
+            const pad = 8;
+            tourSpotlight.style.top = `${rect.top - pad}px`;
+            tourSpotlight.style.left = `${rect.left - pad}px`;
+            tourSpotlight.style.width = `${rect.width + pad * 2}px`;
+            tourSpotlight.style.height = `${rect.height + pad * 2}px`;
+
+            const tooltipHeight = tourTooltip.offsetHeight || 160;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top = spaceBelow > tooltipHeight + 20 ? rect.bottom + 16 : rect.top - tooltipHeight - 16;
+            top = Math.max(12, Math.min(top, window.innerHeight - tooltipHeight - 12));
+
+            let left = rect.left;
+            const tooltipWidth = tourTooltip.offsetWidth || 320;
+            left = Math.max(12, Math.min(left, window.innerWidth - tooltipWidth - 12));
+
+            tourTooltip.style.top = `${top}px`;
+            tourTooltip.style.left = `${left}px`;
+        }, 50);
+    }
+
+    function startTour() {
+        tourStepIndex = 0;
+        const dashboardNav = document.querySelector('.menu-item[data-target="dashboard"]');
+        if (dashboardNav && !dashboardNav.classList.contains('active')) dashboardNav.click();
+        tourBackdrop.classList.add('open');
+        renderTourStep();
+    }
+
+    function endTour() {
+        tourBackdrop.classList.remove('open');
+        try { localStorage.setItem('dcai_tour_seen', 'true'); } catch (e) {}
+    }
+
+    document.getElementById('tour-trigger-btn').addEventListener('click', startTour);
+    document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+    tourNextBtn.addEventListener('click', () => {
+        if (tourStepIndex < TOUR_STEPS.length - 1) {
+            tourStepIndex++;
+            renderTourStep();
+        } else {
+            endTour();
+        }
+    });
+    tourBackBtn.addEventListener('click', () => {
+        if (tourStepIndex > 0) {
+            tourStepIndex--;
+            renderTourStep();
+        }
+    });
+
+    // Auto-show once per browser, shortly after the dashboard first renders.
+    try {
+        if (!localStorage.getItem('dcai_tour_seen')) {
+            setTimeout(startTour, 900);
+        }
+    } catch (e) {}
 </script>
 
 <!-- Slide-out System Info Drawer Overlay and Panel -->
@@ -3436,6 +3945,51 @@
                 2. Input caller phone number.<br>
                 3. Click <strong>Connect Call (Mic)</strong>.<br>
                 4. Talk to the Gemini Live bot, request a slot, and verify the booking updates.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GHL Lead Detail Modal (review exactly what the AI will use as context, then call) -->
+<div class="kb-modal-overlay" id="lead-modal-overlay">
+    <div class="kb-modal" style="max-width: 520px;">
+        <div class="kb-modal-header">
+            <span class="modal-title" id="lead-modal-title">Lead Details</span>
+            <button class="modal-close" id="lead-modal-close">&times;</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:1rem; max-height: 65vh; overflow-y: auto;">
+            <div>
+                <div class="grid-stat-label">Contact</div>
+                <div id="lead-modal-contact" style="font-size:0.85rem; color: var(--text-main); line-height:1.6;"></div>
+            </div>
+            <div>
+                <div class="grid-stat-label">What the AI will know going into this call</div>
+                <div id="lead-modal-summary" class="modal-card-box" style="font-size:0.82rem; color: var(--text-sub); line-height:1.6; padding: 0.9rem; margin-top:0.4rem;"></div>
+            </div>
+            <div>
+                <div class="grid-stat-label">Answered questions</div>
+                <div id="lead-modal-answers" style="font-size:0.8rem; color: var(--text-sub); margin-top:0.4rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.25rem;">
+            <button class="tour-btn" id="lead-modal-cancel">Close</button>
+            <button class="tour-btn primary" id="lead-modal-call-btn">Call Now</button>
+        </div>
+    </div>
+</div>
+
+<!-- Onboarding Tour Overlay -->
+<div class="tour-backdrop" id="tour-backdrop">
+    <div class="tour-spotlight" id="tour-spotlight"></div>
+    <div class="tour-tooltip" id="tour-tooltip">
+        <div class="tour-step-count" id="tour-step-count">Step 1 of 9</div>
+        <div class="tour-title" id="tour-title"></div>
+        <div class="tour-text" id="tour-text"></div>
+        <div class="tour-actions">
+            <button class="tour-skip-btn" id="tour-skip-btn">Skip tour</button>
+            <div class="tour-nav-btns">
+                <button class="tour-btn" id="tour-back-btn">Back</button>
+                <button class="tour-btn primary" id="tour-next-btn">Next</button>
             </div>
         </div>
     </div>
