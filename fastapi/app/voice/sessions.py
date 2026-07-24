@@ -55,6 +55,13 @@ class VoiceAgentSession:
         self.audio_processor = WebRTCExotelProcessor(self.session_id, encoding=encoding)
         self.conversation_text = []
         self.conversation_turns = []
+        # Gemini streams outputTranscription/inputTranscription as many small
+        # fragments per turn (often word-by-word), not one message per full
+        # utterance. These buffer consecutive same-speaker fragments so a
+        # completed turn is saved/displayed as one sentence, not one bubble
+        # per fragment — flushed on a speaker change or turnComplete.
+        self._agent_text_buffer = ""
+        self._user_text_buffer = ""
         self._is_active = True
         self._ai_is_generating = False
         self._is_tool_calling = False
@@ -110,6 +117,20 @@ class VoiceAgentSession:
             msg = build_audio_message(processed_audio, mime_type=f"audio/pcm;rate={rate}")
             await self.gemini_ws.send(json.dumps(msg))
 
+    def _flush_agent_buffer(self):
+        if self._agent_text_buffer:
+            logger.info(f"[{self.session_id}] AI: {self._agent_text_buffer}")
+            self.conversation_text.append(f"Agent: {self._agent_text_buffer}")
+            self.conversation_turns.append({"speaker": "agent", "text": self._agent_text_buffer})
+            self._agent_text_buffer = ""
+
+    def _flush_user_buffer(self):
+        if self._user_text_buffer:
+            logger.info(f"[{self.session_id}] Human: {self._user_text_buffer}")
+            self.conversation_text.append(f"Candidate: {self._user_text_buffer}")
+            self.conversation_turns.append({"speaker": "candidate", "text": self._user_text_buffer})
+            self._user_text_buffer = ""
+
     async def process_gemini_responses(self):
         try:
             async for message in self.gemini_ws:
@@ -125,20 +146,20 @@ class VoiceAgentSession:
                 audio_bytes, is_turn_complete, is_interrupted, text_content, user_text, tool_calls = parse_audio_response(response_data)
 
                 if user_text:
-                    logger.info(f"[{self.session_id}] Human: {user_text}")
-                    self.conversation_text.append(f"Candidate: {user_text}")
-                    self.conversation_turns.append({"speaker": "candidate", "text": user_text})
+                    self._flush_agent_buffer()
+                    self._user_text_buffer += user_text
 
                 if text_content:
-                    logger.info(f"[{self.session_id}] AI: {text_content}")
-                    self.conversation_text.append(f"Agent: {text_content}")
-                    self.conversation_turns.append({"speaker": "agent", "text": text_content})
+                    self._flush_user_buffer()
+                    self._agent_text_buffer += text_content
 
                 if is_interrupted:
                     logger.warning(f"[{self.session_id}] Interrupted!")
                     await self.websocket.send_text(json.dumps({"event": "clear", "streamSid": self.call_sid}))
 
                 if is_turn_complete:
+                    self._flush_agent_buffer()
+                    self._flush_user_buffer()
                     if not self._greeting_done:
                         logger.info(f"[{self.session_id}] Greeting complete. Unmuting user microphone.")
                         self._greeting_done = True
@@ -370,6 +391,9 @@ class VoiceAgentSession:
         self._is_active = False
         if self.gemini_ws:
             await self.gemini_ws.close()
+
+        self._flush_agent_buffer()
+        self._flush_user_buffer()
 
         full_transcript = "\n".join(self.conversation_text)
         await asyncio.to_thread(update_call_transcript, self.db_call_sid, full_transcript, self.conversation_turns)

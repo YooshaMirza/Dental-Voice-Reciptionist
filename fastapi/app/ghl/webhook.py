@@ -175,6 +175,53 @@ def _call_context_from_fields(fields: dict, payload: dict) -> dict:
     }
 
 
+_TEST_LEAD_SAMPLE_ANSWERS = {
+    "How Long Have You Been Missing Your Teeth?": "more than a year",
+    "How Many Missing Or Broken Teeth Do You Have?": "2 to 4",
+    "What Best Describes Your Condition?": "missing back teeth",
+    "Anything That You Would Like For Us to Know Regarding Your Smile?": "I'm nervous about the cost",
+}
+
+
+@router.post("/leads/simulate-test/")
+async def simulate_test_lead(request: Request):
+    """Dashboard-only test helper. Injects a fake lead through the exact same
+    extraction/storage path a real GHL webhook uses, so staff can verify the
+    Pending Leads flow (list, detail modal, Call Now) without waiting for a
+    real lead or needing GHL's workflow pointed at whatever the current ngrok
+    URL happens to be. Always lands as "pending" regardless of the auto-call
+    setting — this is for reviewing the pipeline, not for testing auto-dial."""
+    data = await request.json()
+    phone = (data.get("phone") or "").strip()
+    if not phone:
+        raise HTTPException(status_code=400, detail="Phone number required for the test lead")
+
+    name = (data.get("name") or "Test Patient").strip()
+    name_parts = name.split(" ", 1)
+    payload = {
+        "first_name": name_parts[0],
+        "last_name": name_parts[1] if len(name_parts) > 1 else "Lead",
+        "phone": phone,
+        "email": "test-lead@example.com",
+        "contact_id": f"test_{ObjectId()}",
+        **_TEST_LEAD_SAMPLE_ANSWERS,
+    }
+
+    fields = _extract_lead_fields(payload)
+    lead_doc = {
+        "raw_payload": payload,
+        "received_at": datetime.utcnow(),
+        "status": "pending",
+        "is_test": True,
+        **{k: v for k, v in fields.items() if k not in ("answered_questions", "customer_name")},
+        "customer_name": f"[TEST] {fields['customer_name']}",
+        "answered_questions": fields["answered_questions"],
+    }
+    inserted = ghl_leads_collection.insert_one(lead_doc)
+    logger.info(f"Simulated test lead {inserted.inserted_id} inserted for dashboard testing.")
+    return {"success": True, "lead_id": str(inserted.inserted_id)}
+
+
 @router.post("/webhook/lead/")
 async def ghl_lead_webhook(request: Request):
     payload = await request.json()
@@ -225,6 +272,7 @@ async def list_pending_leads():
                 "received_at": lead["received_at"].isoformat() if lead.get("received_at") else None,
                 "lead_context_summary": lead.get("lead_context_summary") or "",
                 "answered_count": len(lead.get("answered_questions") or []),
+                "is_test": bool(lead.get("is_test")),
             }
             for lead in leads
         ],

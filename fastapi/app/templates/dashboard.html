@@ -2355,9 +2355,12 @@
                     </label>
                 </div>
 
-                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.75rem; font-size:0.72rem; font-weight:700; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
-                    <span class="live-dot"></span>
-                    <span>Live — updates automatically every 30s</span>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.72rem; font-weight:700; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+                        <span class="live-dot"></span>
+                        <span>Live — updates automatically every 30s</span>
+                    </div>
+                    <button id="simulate-test-lead-btn" class="btn-action-confirm" style="padding:0.5rem 1rem; font-size:0.8rem;">+ Simulate Test Lead</button>
                 </div>
 
                 <div class="cards-grid-view" id="pending-leads-container">
@@ -2752,6 +2755,177 @@
 
 <audio id="hidden-player" preload="metadata" style="display: none;"></audio>
 
+<!-- GHL Lead Detail Modal (review exactly what the AI will use as context, then call) -->
+<div class="kb-modal-overlay" id="lead-modal-overlay">
+    <div class="kb-modal" style="max-width: 520px;">
+        <div class="kb-modal-header">
+            <span class="modal-title" id="lead-modal-title">Lead Details</span>
+            <button class="modal-close" id="lead-modal-close">&times;</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:1rem; max-height: 65vh; overflow-y: auto;">
+            <div>
+                <div class="grid-stat-label">Contact</div>
+                <div id="lead-modal-contact" style="font-size:0.85rem; color: var(--text-main); line-height:1.6;"></div>
+            </div>
+            <div>
+                <div class="grid-stat-label">What the AI will know going into this call</div>
+                <div id="lead-modal-summary" class="modal-card-box" style="font-size:0.82rem; color: var(--text-sub); line-height:1.6; padding: 0.9rem; margin-top:0.4rem;"></div>
+            </div>
+            <div>
+                <div class="grid-stat-label">Answered questions</div>
+                <div id="lead-modal-answers" style="font-size:0.8rem; color: var(--text-sub); margin-top:0.4rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.25rem;">
+            <button class="tour-btn" id="lead-modal-cancel">Close</button>
+            <button class="tour-btn primary" id="lead-modal-call-btn">Call Now</button>
+        </div>
+    </div>
+</div>
+
+<!-- Onboarding Tour Overlay -->
+<div class="tour-backdrop" id="tour-backdrop">
+    <div class="tour-spotlight" id="tour-spotlight"></div>
+    <div class="tour-tooltip" id="tour-tooltip">
+        <div class="tour-step-count" id="tour-step-count">Step 1 of 9</div>
+        <div class="tour-title" id="tour-title"></div>
+        <div class="tour-text" id="tour-text"></div>
+        <div class="tour-actions">
+            <button class="tour-skip-btn" id="tour-skip-btn">Skip tour</button>
+            <div class="tour-nav-btns">
+                <button class="tour-btn" id="tour-back-btn">Back</button>
+                <button class="tour-btn primary" id="tour-next-btn">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KB Rule Modal Overlay -->
+<div class="kb-modal-overlay" id="kb-modal-overlay">
+    <div class="kb-modal">
+        <div class="kb-modal-header">
+            <span class="modal-title" id="kb-modal-title">Add KB Rule</span>
+            <button class="modal-close" id="kb-modal-close">&times;</button>
+        </div>
+        <form id="kb-rule-form" onsubmit="handleKbFormSubmit(event)">
+            <input type="hidden" id="kb-rule-id" value="">
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                <div class="form-group">
+                    <label class="form-label" for="kb-category">Category</label>
+                    <select class="form-select" id="kb-category" onchange="togglePricingFields(this.value)">
+                        <option value="general">General</option>
+                        <option value="location">Location</option>
+                        <option value="pricing">Pricing</option>
+                    </select>
+                </div>
+
+                <!-- Pricing Specific Fields (Hidden by default) -->
+                <div id="pricing-specific-fields" style="display:none; flex-direction:column; gap:1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="kb-proc-name">Procedure Name</label>
+                        <input type="text" class="form-input" id="kb-proc-name" placeholder="e.g. Consultation">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="kb-start-price">Starting Price</label>
+                        <input type="text" class="form-input" id="kb-start-price" placeholder="e.g. 60">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="kb-proc-notes">Notes / Special Guidelines</label>
+                        <input type="text" class="form-input" id="kb-proc-notes" placeholder="e.g. do not give unless asked">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="kb-question">Question / Topic</label>
+                    <input type="text" class="form-input" id="kb-question" placeholder="e.g. What are your office hours?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="kb-answer">Response Answer</label>
+                    <textarea class="form-textarea" id="kb-answer" rows="4" placeholder="Type the answer the voice agent should read..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="kb-keywords">Trigger Keywords (comma-separated)</label>
+                    <input type="text" class="form-input" id="kb-keywords" placeholder="e.g. hours, schedule, open" required>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="margin-top:1.5rem;">
+                <button type="button" class="btn-cancel" id="btn-cancel-kb-modal">Cancel</button>
+                <button type="submit" class="btn-glowing">Save Rule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Slide-out System Info Drawer Overlay and Panel -->
+<div class="drawer-overlay" id="about-drawer-overlay"></div>
+<div class="system-drawer" id="about-system-drawer">
+    <div class="drawer-header">
+        <div class="drawer-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>DCAI Portal System Info</span>
+        </div>
+        <button class="drawer-close-btn" id="about-drawer-close">&times;</button>
+    </div>
+
+    <div class="drawer-body">
+        <!-- Card 1 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span>Ideology &amp; Business Flow</span>
+            </div>
+            <div class="info-card-desc">
+                DCAI Houston matches dental implant candidates with All-on-X consultation slots. The AI voice agent answers candidate FAQs, checks slot availability, and requests bookings.
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>Campaign Flow (Option 1)</span>
+            </div>
+            <div class="info-card-desc">
+                We implement the <strong>Appointment Request Workflow</strong>. Bookings are saved as <i>pending</i> requests. The doctor manually confirms or declines them, syncing back to the GoHighLevel API.
+            </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Dashboard Actions</span>
+            </div>
+            <div class="info-card-desc">
+                <ul>
+                    <li><strong>Recent Interactions</strong>: Analyze live transcripts, sentiments, summaries, and play call recordings fetched locally.</li>
+                    <li><strong>Patient Directory</strong>: Manage records (DOB, ZIP, preference notes).</li>
+                    <li><strong>Appointments</strong>: Action buttons send PUT requests to confirm/cancel slots in GHL CRM.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="info-card">
+            <div class="info-card-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                <span>Testing Dialer Simulator</span>
+            </div>
+            <div class="info-card-desc">
+                1. Go to the <strong>Test Suite Dialer</strong> tab.<br>
+                2. Input caller phone number.<br>
+                3. Click <strong>Connect Call (Mic)</strong>.<br>
+                4. Talk to the Gemini Live bot, request a slot, and verify the booking updates.
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Navigation Routing Tabs
     const menuItems = document.querySelectorAll('.menu-item');
@@ -2870,7 +3044,7 @@
                             ${(lead.customer_name || '?').charAt(0).toUpperCase()}
                         </div>
                         <div class="directory-info">
-                            <div class="directory-name">${lead.customer_name || 'Unknown'}</div>
+                            <div class="directory-name">${lead.customer_name || 'Unknown'} ${lead.is_test ? '<span style="font-size:0.62rem; font-weight:700; color: var(--warning, #b8860b); border: 1px solid currentColor; border-radius: 0.3rem; padding: 0.1rem 0.35rem; vertical-align: middle;">TEST</span>' : ''}</div>
                             <div class="directory-status" style="font-size:0.72rem; color: var(--text-muted);">${timeAgo(lead.received_at)}</div>
                         </div>
                     </div>
@@ -2958,6 +3132,36 @@
             btn.textContent = 'Call Now';
         }
     });
+
+    const simulateTestLeadBtn = document.getElementById('simulate-test-lead-btn');
+    if (simulateTestLeadBtn) {
+        simulateTestLeadBtn.addEventListener('click', async () => {
+            const phone = prompt('Phone number to test with (this is the number that will actually ring if you click "Call Now" on the resulting lead):');
+            if (!phone) return;
+            const name = prompt('Test lead name (optional):', 'Test Patient') || 'Test Patient';
+
+            simulateTestLeadBtn.disabled = true;
+            simulateTestLeadBtn.textContent = 'Adding...';
+            try {
+                const resp = await fetch('/api/ghl/leads/simulate-test/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, name })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    loadPendingLeads();
+                } else {
+                    alert('Failed to add test lead: ' + (data.detail || 'unknown error'));
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                simulateTestLeadBtn.disabled = false;
+                simulateTestLeadBtn.textContent = '+ Simulate Test Lead';
+            }
+        });
+    }
 
     // Check for pending leads on initial dashboard load too, so the sidebar badge
     // shows a count even before the user opens the Pending Leads tab. Then keep
@@ -3902,176 +4106,5 @@
         }
     } catch (e) {}
 </script>
-
-<!-- Slide-out System Info Drawer Overlay and Panel -->
-<div class="drawer-overlay" id="about-drawer-overlay"></div>
-<div class="system-drawer" id="about-system-drawer">
-    <div class="drawer-header">
-        <div class="drawer-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            <span>DCAI Portal System Info</span>
-        </div>
-        <button class="drawer-close-btn" id="about-drawer-close">&times;</button>
-    </div>
-    
-    <div class="drawer-body">
-        <!-- Card 1 -->
-        <div class="info-card">
-            <div class="info-card-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                <span>Ideology &amp; Business Flow</span>
-            </div>
-            <div class="info-card-desc">
-                DCAI Houston matches dental implant candidates with All-on-X consultation slots. The AI voice agent answers candidate FAQs, checks slot availability, and requests bookings.
-            </div>
-        </div>
-
-        <!-- Card 2 -->
-        <div class="info-card">
-            <div class="info-card-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                <span>Campaign Flow (Option 1)</span>
-            </div>
-            <div class="info-card-desc">
-                We implement the <strong>Appointment Request Workflow</strong>. Bookings are saved as <i>pending</i> requests. The doctor manually confirms or declines them, syncing back to the GoHighLevel API.
-            </div>
-        </div>
-
-        <!-- Card 3 -->
-        <div class="info-card">
-            <div class="info-card-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                <span>Dashboard Actions</span>
-            </div>
-            <div class="info-card-desc">
-                <ul>
-                    <li><strong>Recent Interactions</strong>: Analyze live transcripts, sentiments, summaries, and play call recordings fetched locally.</li>
-                    <li><strong>Patient Directory</strong>: Manage records (DOB, ZIP, preference notes).</li>
-                    <li><strong>Appointments</strong>: Action buttons send PUT requests to confirm/cancel slots in GHL CRM.</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Card 4 -->
-        <div class="info-card">
-            <div class="info-card-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                <span>Testing Dialer Simulator</span>
-            </div>
-            <div class="info-card-desc">
-                1. Go to the <strong>Test Suite Dialer</strong> tab.<br>
-                2. Input caller phone number.<br>
-                3. Click <strong>Connect Call (Mic)</strong>.<br>
-                4. Talk to the Gemini Live bot, request a slot, and verify the booking updates.
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- GHL Lead Detail Modal (review exactly what the AI will use as context, then call) -->
-<div class="kb-modal-overlay" id="lead-modal-overlay">
-    <div class="kb-modal" style="max-width: 520px;">
-        <div class="kb-modal-header">
-            <span class="modal-title" id="lead-modal-title">Lead Details</span>
-            <button class="modal-close" id="lead-modal-close">&times;</button>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:1rem; max-height: 65vh; overflow-y: auto;">
-            <div>
-                <div class="grid-stat-label">Contact</div>
-                <div id="lead-modal-contact" style="font-size:0.85rem; color: var(--text-main); line-height:1.6;"></div>
-            </div>
-            <div>
-                <div class="grid-stat-label">What the AI will know going into this call</div>
-                <div id="lead-modal-summary" class="modal-card-box" style="font-size:0.82rem; color: var(--text-sub); line-height:1.6; padding: 0.9rem; margin-top:0.4rem;"></div>
-            </div>
-            <div>
-                <div class="grid-stat-label">Answered questions</div>
-                <div id="lead-modal-answers" style="font-size:0.8rem; color: var(--text-sub); margin-top:0.4rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
-            </div>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.25rem;">
-            <button class="tour-btn" id="lead-modal-cancel">Close</button>
-            <button class="tour-btn primary" id="lead-modal-call-btn">Call Now</button>
-        </div>
-    </div>
-</div>
-
-<!-- Onboarding Tour Overlay -->
-<div class="tour-backdrop" id="tour-backdrop">
-    <div class="tour-spotlight" id="tour-spotlight"></div>
-    <div class="tour-tooltip" id="tour-tooltip">
-        <div class="tour-step-count" id="tour-step-count">Step 1 of 9</div>
-        <div class="tour-title" id="tour-title"></div>
-        <div class="tour-text" id="tour-text"></div>
-        <div class="tour-actions">
-            <button class="tour-skip-btn" id="tour-skip-btn">Skip tour</button>
-            <div class="tour-nav-btns">
-                <button class="tour-btn" id="tour-back-btn">Back</button>
-                <button class="tour-btn primary" id="tour-next-btn">Next</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- KB Rule Modal Overlay -->
-<div class="kb-modal-overlay" id="kb-modal-overlay">
-    <div class="kb-modal">
-        <div class="kb-modal-header">
-            <span class="modal-title" id="kb-modal-title">Add KB Rule</span>
-            <button class="modal-close" id="kb-modal-close">&times;</button>
-        </div>
-        <form id="kb-rule-form" onsubmit="handleKbFormSubmit(event)">
-            <input type="hidden" id="kb-rule-id" value="">
-            <div style="display:flex; flex-direction:column; gap:1.25rem;">
-                <div class="form-group">
-                    <label class="form-label" for="kb-category">Category</label>
-                    <select class="form-select" id="kb-category" onchange="togglePricingFields(this.value)">
-                        <option value="general">General</option>
-                        <option value="location">Location</option>
-                        <option value="pricing">Pricing</option>
-                    </select>
-                </div>
-                
-                <!-- Pricing Specific Fields (Hidden by default) -->
-                <div id="pricing-specific-fields" style="display:none; flex-direction:column; gap:1.25rem;">
-                    <div class="form-group">
-                        <label class="form-label" for="kb-proc-name">Procedure Name</label>
-                        <input type="text" class="form-input" id="kb-proc-name" placeholder="e.g. Consultation">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="kb-start-price">Starting Price</label>
-                        <input type="text" class="form-input" id="kb-start-price" placeholder="e.g. 60">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="kb-proc-notes">Notes / Special Guidelines</label>
-                        <input type="text" class="form-input" id="kb-proc-notes" placeholder="e.g. do not give unless asked">
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="kb-question">Question / Topic</label>
-                    <input type="text" class="form-input" id="kb-question" placeholder="e.g. What are your office hours?" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="kb-answer">Response Answer</label>
-                    <textarea class="form-textarea" id="kb-answer" rows="4" placeholder="Type the answer the voice agent should read..." required></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="kb-keywords">Trigger Keywords (comma-separated)</label>
-                    <input type="text" class="form-input" id="kb-keywords" placeholder="e.g. hours, schedule, open" required>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="margin-top:1.5rem;">
-                <button type="button" class="btn-cancel" id="btn-cancel-kb-modal">Cancel</button>
-                <button type="submit" class="btn-glowing">Save Rule</button>
-            </div>
-        </form>
-    </div>
-</div>
 </body>
 </html>
