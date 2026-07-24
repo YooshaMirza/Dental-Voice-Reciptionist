@@ -26,6 +26,9 @@ class WebRTCExotelProcessor:
         self.frame_duration_ms = 20
         self.frame_samples = int(self.gemini_in_rate * (self.frame_duration_ms / 1000.0))
         self.frame_bytes = self.frame_samples * self.sample_width
+        # Frame size at the *outbound* (Twilio-facing, 8kHz) rate — used by
+        # the continuous ambience sender to pace real-time 20ms audio frames.
+        self.frame_samples_8k_bytes = int(self.exotel_rate * (self.frame_duration_ms / 1000.0)) * self.sample_width
         self._in_buffer = bytearray()
 
         logger.info(f"[{self.session_id}] High-Fidelity Mode: Using direct decimation for 24k->8k (Grain Reduction).")
@@ -34,9 +37,18 @@ class WebRTCExotelProcessor:
         pcm_8k = audioop.ulaw2lin(audio_chunk, self.sample_width)
         return self.process_chunk(pcm_8k)
 
-    def process_outbound(self, pcm_gemini: bytes) -> bytes:
-        pcm_8k = b"".join([pcm_gemini[i:i + 2] for i in range(0, len(pcm_gemini), 6)])
+    def decimate_outbound(self, pcm_gemini: bytes) -> bytes:
+        """Gemini's 24kHz linear PCM -> 8kHz linear PCM (direct decimation,
+        no anti-aliasing filter). Exposed separately from process_outbound so
+        ambience mixing (app/voice/ambience.py) can happen at 8kHz, after
+        this step — mixing broadband noise in before it aliases badly."""
+        return b"".join([pcm_gemini[i:i + 2] for i in range(0, len(pcm_gemini), 6)])
+
+    def encode_ulaw(self, pcm_8k: bytes) -> bytes:
         return audioop.lin2ulaw(pcm_8k, self.sample_width)
+
+    def process_outbound(self, pcm_gemini: bytes) -> bytes:
+        return self.encode_ulaw(self.decimate_outbound(pcm_gemini))
 
     def process_chunk(self, pcm_8k: bytes) -> bytes:
         pcm_in, self._rate_cv_state_in = audioop.ratecv(

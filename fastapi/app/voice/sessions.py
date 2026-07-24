@@ -14,6 +14,7 @@ import json
 import logging
 import base64
 import difflib
+import time
 from datetime import datetime, date
 
 import websockets
@@ -28,6 +29,7 @@ from app.voice.vertex_ai_client import (
     build_tool_response,
 )
 from app.voice.audio_processor import WebRTCExotelProcessor
+from app.voice.ambience import build_ambience_mixer
 from app.voice.call_prompts import get_system_prompt
 from app.core.config import load_config
 from app.db.calls import update_call_status, update_call_transcript
@@ -53,6 +55,16 @@ class VoiceAgentSession:
         self.provider = load_config().get("GEMINI_PROVIDER", "vertex")
         encoding = self.media_format.get("encoding", "alaw")
         self.audio_processor = WebRTCExotelProcessor(self.session_id, encoding=encoding)
+        # Call-center ambience (background noise + light echo) mixed into the
+        # AI's own voice before it's sent to Twilio, so it doesn't sound like
+        # a dead-silent AI in a vacuum. See app/voice/ambience.py — Twilio has
+        # no built-in equivalent for a synthesized voice. Mixed at the 8kHz
+        # output rate (after decimation), not Gemini's native 24kHz — see
+        # ambience.py's module docstring for why.
+        self.ambience_mixer = build_ambience_mixer(self.audio_processor.exotel_rate)
+        # Decimated (8kHz) AI speech waiting to be paced out by
+        # stream_ambience_loop() at real-time 20ms frame intervals.
+        self._pending_agent_pcm = bytearray()
         self.conversation_text = []
         self.conversation_turns = []
         # Gemini streams outputTranscription/inputTranscription as many small
@@ -86,6 +98,7 @@ class VoiceAgentSession:
             await self.gemini_ws.send(json.dumps(setup_msg))
 
             asyncio.create_task(self.process_gemini_responses())
+            asyncio.create_task(self.stream_ambience_loop())
             return True
         except Exception as e:
             logger.error(f"[{self.session_id}] Gemini connection failed: {e}")
@@ -155,6 +168,7 @@ class VoiceAgentSession:
 
                 if is_interrupted:
                     logger.warning(f"[{self.session_id}] Interrupted!")
+                    self._pending_agent_pcm.clear()
                     await self.websocket.send_text(json.dumps({"event": "clear", "streamSid": self.call_sid}))
 
                 if is_turn_complete:
@@ -168,14 +182,11 @@ class VoiceAgentSession:
                     self._ai_is_generating = False
 
                 if audio_bytes:
-                    outbound_audio = self.audio_processor.process_outbound(audio_bytes)
-                    if outbound_audio:
-                        payload = base64.b64encode(outbound_audio).decode("utf-8")
-                        await self.websocket.send_text(json.dumps({
-                            "event": "media",
-                            "streamSid": self.call_sid,
-                            "media": {"payload": payload},
-                        }))
+                    # Decimated only, NOT mixed/encoded/sent here — the
+                    # continuous stream_ambience_loop() task is the single
+                    # sender now, so ambience plays underneath both AI speech
+                    # and silence (the caller's own turn), not just AI turns.
+                    self._pending_agent_pcm += self.audio_processor.decimate_outbound(audio_bytes)
 
                 if tool_calls:
                     for call in tool_calls:
@@ -183,6 +194,56 @@ class VoiceAgentSession:
 
         except Exception as e:
             logger.error(f"[{self.session_id}] Gemini response handler error: {e}")
+
+    async def stream_ambience_loop(self):
+        """Sends one 20ms audio frame to Twilio on a fixed real-time clock for
+        the whole call, whether or not the AI is currently speaking. This is
+        what makes background ambience audible continuously — including
+        during the caller's own turn — instead of only appearing in the
+        bursts of audio Gemini happens to produce. Pulls whatever AI speech
+        is queued in self._pending_agent_pcm (falling back to silence when
+        none is queued), mixes in the ambience loop, and sends it."""
+        frame_bytes = self.audio_processor.frame_samples_8k_bytes
+        interval = self.audio_processor.frame_duration_ms / 1000.0
+        silence_frame = bytes(frame_bytes)
+        next_tick = time.monotonic()
+
+        while self._is_active:
+            if len(self._pending_agent_pcm) >= frame_bytes:
+                frame = bytes(self._pending_agent_pcm[:frame_bytes])
+                del self._pending_agent_pcm[:frame_bytes]
+            elif self._pending_agent_pcm:
+                # Send exactly what's queued rather than padding the rest
+                # with hard zero bytes — zero-padding butts a true-silence
+                # value directly against the real waveform's last sample,
+                # which is an abrupt discontinuity that clicks/pops on
+                # playback. A shorter-than-320-byte frame is fine; mix()
+                # and encode_ulaw() both handle arbitrary lengths correctly.
+                frame = bytes(self._pending_agent_pcm)
+                self._pending_agent_pcm.clear()
+            else:
+                frame = silence_frame
+
+            try:
+                if self.ambience_mixer:
+                    frame = self.ambience_mixer.mix(frame)
+                outbound_audio = self.audio_processor.encode_ulaw(frame)
+                payload = base64.b64encode(outbound_audio).decode("utf-8")
+                await self.websocket.send_text(json.dumps({
+                    "event": "media",
+                    "streamSid": self.call_sid,
+                    "media": {"payload": payload},
+                }))
+            except Exception as e:
+                logger.error(f"[{self.session_id}] Ambience stream send error: {e}")
+                break
+
+            next_tick += interval
+            sleep_for = next_tick - time.monotonic()
+            if sleep_for > 0:
+                await asyncio.sleep(sleep_for)
+            else:
+                next_tick = time.monotonic()
 
     def _make_json_safe(self, obj):
         if isinstance(obj, (datetime, date)):

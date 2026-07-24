@@ -54,6 +54,7 @@ async def on_startup():
     ensure_default_web_user()
 
     from app.voice.vertex_ai_client import warm_up_token_cache
+    from app.voice.ambience import warm_up_ambience_cache
     import threading
 
     def _warmup():
@@ -63,6 +64,7 @@ async def on_startup():
             logger.warning(f"Token warm-up failed (will retry on first call): {e}")
 
     threading.Thread(target=_warmup, daemon=True).start()
+    threading.Thread(target=warm_up_ambience_cache, daemon=True).start()
 
 
 @app.get("/health")
