@@ -1712,6 +1712,20 @@
         .switch input:checked + .switch-slider { background-color: var(--primary); }
         .switch input:checked + .switch-slider::before { transform: translateX(20px); }
 
+        .live-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 0 rgba(76, 154, 120, 0.6);
+            animation: live-pulse 2s infinite;
+        }
+        @keyframes live-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 154, 120, 0.6); }
+            70% { box-shadow: 0 0 0 6px rgba(76, 154, 120, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 154, 120, 0); }
+        }
+
         .lead-card-summary {
             font-size: 0.78rem;
             color: var(--text-sub);
@@ -2341,6 +2355,11 @@
                     </label>
                 </div>
 
+                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.75rem; font-size:0.72rem; font-weight:700; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+                    <span class="live-dot"></span>
+                    <span>Live — updates automatically every 30s</span>
+                </div>
+
                 <div class="cards-grid-view" id="pending-leads-container">
                     <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">Loading pending leads...</div>
                 </div>
@@ -2941,8 +2960,11 @@
     });
 
     // Check for pending leads on initial dashboard load too, so the sidebar badge
-    // shows a count even before the user opens the Pending Leads tab.
+    // shows a count even before the user opens the Pending Leads tab. Then keep
+    // polling every 30s — both the badge (always) and the list itself if that
+    // tab happens to be open — so new leads appear without a manual refresh.
     loadPendingLeads();
+    setInterval(loadPendingLeads, 30000);
 
     // ── Knowledge Base Management Logic ──────────────────────────────────────
     let kbRules = [];
